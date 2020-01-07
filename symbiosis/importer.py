@@ -53,10 +53,29 @@ def import_company_data(filename):
 
 def import_association_table(filename):
     association_data, hs_overview, hs_codes, concordance = parse(filename)
-    import_associations(association_data)
+    print(import_associations(association_data))
 
 def import_associations(association_data):
-    pass
+    rows = []
+    r = 0
+    for row in association_data.rows:
+        if r < 13:
+            r += 1
+            continue
+
+        rows.append([])
+
+        c = 0
+        for cell in row:
+            if c < 1:
+                c += 1
+                continue
+            elif c > 15:
+                break
+            rows[-1].append(cell.value)
+            c += 1
+        r += 1
+    return rows
     
 # import xlsx sheets:
 # 1) NACE REV.2 - ISIC REV.4 associations
@@ -64,7 +83,7 @@ def import_associations(association_data):
 # 3) HS_Codes
 # 4) HS_ISICv4 Concordance
 def parse(filename):
-    wb = openpyxl.load_workbook(filename)
+    wb = openpyxl.load_workbook(filename, read_only=True)
     print("importing %s" %filename)
     print(wb.sheetnames)
     return [sheet for sheet in wb]
