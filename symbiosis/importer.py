@@ -6,17 +6,21 @@ import openpyxl
 
 class Company:
 
-    def __init__(self):
-        self.name = ""
-        self.sector = ""
-        self.products = []
-        self.isic_codes = []
-        self.size = ""
-        self.street = ""
-        self.number = ""
-        self.postal_code = ""
-        self.year = ""
-        self.website = ""
+    def __init__(self, row):
+        self.name = row[0]
+        self.sector = row[1]
+        self.products = [entry for entry in row[2].split("/")]
+        self.isic_codes = [entry for entry in str(row[3]).split("/")]
+        self.size = row[4]
+        self.street = row[5]
+        self.number = row[6]
+        self.postal_code = row[7]
+        self.year = row[8]
+        self.website = row[9]
+
+    def __str__(self):
+        return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s" %(self.name, self.sector, self.products, self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website)
+
 
 class ISIC4:
 
@@ -57,13 +61,37 @@ class ISIC4:
             return "material.HS-In-Low: %s; material.HS-In-High: %s; material.HS-Out-Products: %s; material.HS-Out-Low: %s; material.HS-Out-High: %s" %(self.hs_in_low, self.hs_in_high, self.hs_out_products, self.hs_out_low, self.hs_out_high)
 
 def import_company_data(filename):
-    pass
+    company_data = parse(filename)[0]
+    rows = []
+    r = 0
+    for row in company_data.rows:
+        #ignore header
+        if r < 2:
+            r += 1
+            continue
+        c = 0
+        for cell in row:
+            if not cell.value:
+                continue
+            elif c < 1:
+                rows.append([])
+            rows[-1].append(cell.value)
+            c += 1
+        r += 1
+    return rows
+
+def to_dict(isic_rows):
+    return {isic.code:isic for isic in isic_rows}
 
 def to_ISIC(association_list):
     return [ISIC4(row) for row in association_list]
 
+def to_Company(company_list):
+    return [Company(row) for row in company_list]
+
 def import_association_table(filename):
     association_data, hs_overview, hs_codes, concordance = parse(filename)
+    #TODO import remaining sheets
     return to_ISIC(import_associations(association_data))
 
 def import_associations(association_data):
@@ -99,12 +127,15 @@ def parse(filename):
     print(wb.sheetnames)
     return [sheet for sheet in wb]
 
+def main(association_table_path, company_data_path):
+    assoc_table = to_dict(import_association_table(association_table_path))
+    company_data = to_Company(import_company_data(company_data_path))
+    return (assoc_table, company_data)
+
+
 if __name__=="__main__":
     data_path = os.path.join(os.path.dirname(__file__), "..", "data")
-    company_data_path = os.path.join(data_path, "20191216_Unternehmensverzeichnis_Toydata.xlsx")
+    company_data_path = os.path.join(data_path, "20191216_Unternehmensverzeichnis_Toydata_2.xlsx")
     association_table_path = os.path.join(data_path, "20191216_Association_Table_2.xlsx")
     
-    for entry in import_association_table(association_table_path):
-        if entry.energy.thermal:
-            print(str(entry))
-    import_company_data(company_data_path)
+    main(association_table_path, company_data_path)
