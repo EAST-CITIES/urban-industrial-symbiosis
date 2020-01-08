@@ -139,9 +139,16 @@ def parse(filename):
     print(wb.sheetnames)
     return [sheet for sheet in wb]
 
+def get_isic_data(assoc_table, company):
+    return [assoc_table.get(code) for code in company.isic_codes]
+
 def main(association_table_path, company_data_path):
     assoc_table = to_dict(import_association_table(association_table_path))
     company_data = to_Company(import_company_data(company_data_path))
+    for company in company_data:
+        print(company)
+        for isic in get_isic_data(assoc_table, company):
+            print(isic)
     return (assoc_table, company_data)
 
 
