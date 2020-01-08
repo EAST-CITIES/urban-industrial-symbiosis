@@ -65,12 +65,29 @@ class ISIC4:
             else:
                 raise ValueError(cell)
 
-        #TODO matching function...
         #for each energy type: score for input and output match / overlap
-        #average over all types (fixed number of types)
-        #allow adding weights to different types
-        def energy_flow_symbiosis_score(self, energy):
-            return 0
+        #TODO allow adding weights to different types?
+        def get_energy_flow_symbiosis_score(self, energy):
+            return sum(self. get_energy_flow_symbiosis_potential(energy))
+
+        def get_energy_flow_symbiosis_potential(self, energy):
+            return [1 - self.get_divergence_thermal(energy), 1 - self.get_divergence_electrical(energy), 1 - self.get_divergence_chemical(energy), 1 - self.get_divergence_mechanical(energy), 1 - self.get_divergence_conditioned_media(energy)]
+
+        #the smaller the divergence score, the better the match
+        def get_divergence_thermal(self, energy):
+            return abs(self.thermal_in - energy.thermal_out)
+
+        def get_divergence_electrical(self, energy):
+            return abs(self.electrical_in - self.electrical_out)
+ 
+        def get_divergence_chemical(self, energy):
+            return abs(self.chemical_in - self.chemical_out)
+
+        def get_divergence_mechanical(self, energy):
+            return abs(self.mechanical_in - self.mechanical_out)
+        
+        def get_divergence_conditioned_media(self, energy):
+            return abs(self.conditioned_media_in - self.conditioned_media_out)
 
     class Material:
 
