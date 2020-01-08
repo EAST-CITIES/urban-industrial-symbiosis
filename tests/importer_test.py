@@ -9,7 +9,7 @@ company_data_path = os.path.join(data_path, "20191216_Unternehmensverzeichnis_To
 association_table_path = os.path.join(data_path, "20191216_Association_Table_2.xlsx")
 
 def test_association_table_import():
-    entries_with_thermal_energy = [entry for entry in symbiosis.importer.import_association_table(association_table_path) if entry.energy.thermal]
+    entries_with_thermal_energy = [entry for entry in symbiosis.importer.import_association_table(association_table_path) if entry.energy.thermal_out]
 
     assert(len(entries_with_thermal_energy) == 5)
 

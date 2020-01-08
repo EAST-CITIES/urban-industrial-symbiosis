@@ -39,14 +39,26 @@ class ISIC4:
     class Energy:
         
         def __init__(self, cells):
-            self.thermal = cells[0]
-            self.electrical = cells[1]
-            self.chemical = cells[2]
-            self.mechanical = cells[3]
-            self.conditioned_media = cells[4]
+            self.thermal_in, self.thermal_out = self.get_input_and_output(cells[0])
+            self.electrical_in, self.electrical_out = self.get_input_and_output(cells[1])
+            self.chemical_in, self.chemical_out = self.get_input_and_output(cells[2])
+            self.mechanical_in, self.mechanical_out = self.get_input_and_output(cells[3])
+            self.conditioned_media_in, self.conditioned_media_out = self.get_input_and_output(cells[4])
 
         def __str__(self):
-            return "energy.thermal: %s; energy.electrical: %s; energy.chemical: %s; energy.mechanical: %s; energy.conditioned_media: %s" %(self.thermal, self.electrical, self.chemical, self.mechanical, self.conditioned_media)
+            return "energy.thermal_in: %s; energy.thermal_out: %s; energy.electrical_in: %s; energy.electrical_out: %s; energy.chemical_in: %s; energy.chemical_out: %s; energy.mechanical_in: %s; energy.mechanical_out: %s; energy.conditioned_media_in: %s; energy.conditioned_media_out: %s" %(self.thermal_in, self.thermal_out, self.electrical_in, self.electrical_out, self.chemical_in, self.chemical_out, self.mechanical_in, self.mechanical_out, self.conditioned_media_in, self.conditioned_media_out)
+
+        def get_input_and_output(self, cell):
+            if not cell:
+                return (None, None)
+            cell = str(cell)
+            if len(cell) == 2:
+                return (int(cell[0]), int(cell[1]))
+            #leading zeros are ignored
+            elif len(cell) == 1:
+                return (0, int(cell[0]))
+            else:
+                raise ValueError(cell)
 
     class Material:
 
