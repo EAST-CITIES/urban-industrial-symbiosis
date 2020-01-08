@@ -18,8 +18,13 @@ class Company:
         self.year = row[8]
         self.website = row[9]
 
+        #TODO compute using energy and material inputs and outputs
+        #TODO (later) use geo-locations / street networks for ranking
+        def symbiosis_potential_score(self, company):
+            return None
+
     def __str__(self):
-        return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s" %(self.name, self.sector, self.products, self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website)
+        return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s" %(self.name, self.sector, [str(p) for p in self.products], self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website)
 
 
 class ISIC4:
@@ -60,17 +65,53 @@ class ISIC4:
             else:
                 raise ValueError(cell)
 
+        #TODO matching function...
+        #for each energy type: score for input and output match / overlap
+        #average over all types (fixed number of types)
+        #allow adding weights to different types
+        def energy_flow_symbiosis_score(self, energy):
+            return 0
+
     class Material:
 
         def __init__(self, cells):
-            self.hs_in_low = cells[0]
-            self.hs_in_high = cells[1]
-            self.hs_out_products = cells[2]
-            self.hs_out_low = cells[3]
-            self.hs_out_high = cells[4]
+            self.hs_in_low = self.to_products(cells[0])
+            self.hs_in_high = self.to_products(cells[1])
+            self.hs_out_products = self.to_products(cells[2])
+            self.hs_out_low = self.to_products(cells[3])
+            self.hs_out_high = self.to_products(cells[4])
 
         def __str__(self):
-            return "material.HS-In-Low: %s; material.HS-In-High: %s; material.HS-Out-Products: %s; material.HS-Out-Low: %s; material.HS-Out-High: %s" %(self.hs_in_low, self.hs_in_high, self.hs_out_products, self.hs_out_low, self.hs_out_high)
+            return "material.HS-In-Low: %s; material.HS-In-High: %s; material.HS-Out-Products: %s; material.HS-Out-Low: %s; material.HS-Out-High: %s" %([str(p) for p in self.hs_in_low], [str(p) for p in self.hs_in_high], [str(p) for p in self.hs_out_products], [str(p) for p in self.hs_out_low], [str(p) for p in self.hs_out_high])
+
+        def to_products(self, cell):
+            return [self.Product(code) for code in str(cell).split(";")]
+
+        #TODO matching function...
+        #for each product: score for input and output match / overlap (also consider similarity/compatibility...)
+        #average/sum over all products (variable number of products)
+        def material_flow_symbiosis_score(self, material):
+            return 0
+
+        class Product:
+
+            def __init__(self, hs2):
+                self.hs2 = hs2
+                self.hs4 = None
+                self.hs6 = None
+                self.label = None
+                self.desci4 = None
+
+            #TODO use graph-based similarity measure
+            def similarity(self, product):
+                if self.hs2 == product.hs2:
+                    return 1
+                return 0
+
+            def __str__(self):
+                #return "HS-2: %s (%s)" %(self.hs2, self.label)
+                return "HS-2: %s" %self.hs2
+
 
 def import_company_data(filename):
     company_data = parse(filename)[0]
