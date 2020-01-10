@@ -3,6 +3,7 @@
 
 import os
 import openpyxl
+import collections
 
 class Company:
 
@@ -18,14 +19,35 @@ class Company:
         self.year = row[8]
         self.website = row[9]
 
-        #TODO compute using energy and material inputs and outputs
-        #TODO (later) use geo-locations / street networks for ranking
-        def symbiosis_potential_score(self, company):
-            return None
+    #return vector with scores for energy and material input and output overlaps
+    #TODO (later) also use geo-locations / street networks for ranking
+    def get_symbiosis_potential(self, company, assoc_table):
+        potential = self.get_energy_flow_symbiosis_potential(company, assoc_table)
+        potential.extend(self.get_material_flow_symbiosis_potential(company, assoc_table))
+        return potential
 
     def __str__(self):
         return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s" %(self.name, self.sector, [str(p) for p in self.products], self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website)
 
+    #TODO there should only be one code - else how to combine conflicting flow specifications?
+    #for now: use only first code
+    def get_energy_flow_symbiosis_potential(self, company, assoc_table):
+        scores = [0]
+        for code in self.isic_codes:
+            for code2 in company.isic_codes:
+                scores.extend(assoc_table.get(code).energy.get_energy_flow_symbiosis_potential(assoc_table.get(code2).energy))
+                break
+            break
+        #print("energy flow symbiosis potential: " + (str(scores)))
+        return scores
+
+    def get_material_flow_symbiosis_potential(self, company, assoc_table):
+        scores = [0]
+        for code in self.isic_codes:
+            for code2 in company.isic_codes:
+                scores.extend(assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials))
+        #print("material flow symbiosis potential: " + (str(scores)))
+        return scores
 
 class ISIC4:
 
@@ -55,7 +77,8 @@ class ISIC4:
 
         def get_input_and_output(self, cell):
             if not cell:
-                return (None, None)
+                #return (None, None)
+                return (0,0)
             cell = str(cell)
             if len(cell) == 2:
                 return (int(cell[0]), int(cell[1]))
@@ -70,24 +93,31 @@ class ISIC4:
         def get_energy_flow_symbiosis_score(self, energy):
             return sum(self. get_energy_flow_symbiosis_potential(energy))
 
-        def get_energy_flow_symbiosis_potential(self, energy):
-            return [1 - self.get_divergence_thermal(energy), 1 - self.get_divergence_electrical(energy), 1 - self.get_divergence_chemical(energy), 1 - self.get_divergence_mechanical(energy), 1 - self.get_divergence_conditioned_media(energy)]
+        #weighting_schema: [exact match input and output: 1; divergence of 1: 0.5; divergence of 2: 0.3]
+        def get_energy_flow_symbiosis_potential(self, energy, weighting_scheme = [1.0, 0.5, 0.3]):
+            return [self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_scheme), self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_scheme), self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_scheme), self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_scheme), self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_scheme)]
 
-        #the smaller the divergence score, the better the match
-        def get_divergence_thermal(self, energy):
-            return abs(self.thermal_in - energy.thermal_out)
+        def get_potential(self, energy1_in, energy2_out, energy1_out, energy2_in, weighting_scheme):
+            if energy1_in + energy2_out + energy1_out + energy2_in == 0:
+                return 0
+            p = 0
+            div_in1_out2 = abs(energy1_in - energy2_out)
+            if div_in1_out2 == 0:
+                p = weighting_scheme[0]
+            elif div_in1_out2 == 1:
+                p = weighting_scheme[1]
+            elif div_in1_out2 == 2:
+                p = weighting_scheme[2]
 
-        def get_divergence_electrical(self, energy):
-            return abs(self.electrical_in - self.electrical_out)
- 
-        def get_divergence_chemical(self, energy):
-            return abs(self.chemical_in - self.chemical_out)
+            div_in2_out1 = abs(energy1_out - energy2_in)
+            if div_in2_out1 == 0:
+                p += weighting_scheme[0]
+            elif div_in2_out1 == 1:
+                p += weighting_scheme[1]
+            elif div_in2_out1 == 2:
+                p += weighting_scheme[2]
+            return p
 
-        def get_divergence_mechanical(self, energy):
-            return abs(self.mechanical_in - self.mechanical_out)
-        
-        def get_divergence_conditioned_media(self, energy):
-            return abs(self.conditioned_media_in - self.conditioned_media_out)
 
     class Material:
 
@@ -101,14 +131,49 @@ class ISIC4:
         def __str__(self):
             return "material.HS-In-Low: %s; material.HS-In-High: %s; material.HS-Out-Products: %s; material.HS-Out-Low: %s; material.HS-Out-High: %s" %([str(p) for p in self.hs_in_low], [str(p) for p in self.hs_in_high], [str(p) for p in self.hs_out_products], [str(p) for p in self.hs_out_low], [str(p) for p in self.hs_out_high])
 
+        #TODO add leading 0 if only one digit?
         def to_products(self, cell):
-            return [self.Product(code) for code in str(cell).split(";")]
+            return [self.Product(code) for code in str(cell).split(";") if code != "None"]
 
-        #TODO matching function...
         #for each product: score for input and output match / overlap (also consider similarity/compatibility...)
-        #average/sum over all products (variable number of products)
-        def material_flow_symbiosis_score(self, material):
-            return 0
+        #weighting_scheme: [perfect_match(product and volume), partial_match (similar product, same volume), product_match (different volume), minimal_match (similar product, different volume)]
+        def get_material_flow_symbiosis_potential(self, material, weighting_scheme = [1, 0.3, 0.5, 0.1]):
+        #def get_product_matches(self, material, weighting_scheme):
+            matches = []
+            for product in self.hs_in_low:
+                for p in material.hs_out_low:
+                    if product.similarity(p) == 1:
+                        matches.append(weighting_scheme[0])
+                    elif product.similarity(p) == 0.5:
+                        matches.append(weighting_scheme[1])
+                for p in material.hs_out_products:
+                    if product.similarity(p) == 1:
+                        matches.append(weighting_scheme[2]) 
+                    elif product.similarity(p) == 0.5:
+                        matches.append(weighting_scheme[3])
+                for p in material.hs_out_high:
+                    if product.similarity(p) == 1:
+                        matches.append(weighting_scheme[2]) 
+                    elif product.similarity(p) == 0.5:
+                        matches.append(weighting_scheme[3])
+
+            for product in self.hs_in_high:
+                for p in material.hs_out_high:
+                    if product.similarity(p) == 1:
+                        matches.append(weighting_scheme[0])
+                    elif product.similarity(p) == 0.5:
+                        matches.append(weighting_scheme[1])
+                for p in material.hs_out_products:
+                    if product.similarity(p) == 1:
+                        matches.append(weighting_scheme[0])
+                    elif product.similarity(p) == 0.5:
+                        matches.append(weighting_scheme[1])
+                for p in material.hs_out_low:
+                    if product.similarity(p) == 1:
+                        matches.append(weighting_scheme[2]) 
+                    elif product.similarity(p) == 0.5:
+                        matches.append(weighting_scheme[3])
+            return matches
 
         class Product:
 
@@ -123,12 +188,17 @@ class ISIC4:
             def similarity(self, product):
                 if self.hs2 == product.hs2:
                     return 1
+                else:
+                    try:
+                        if self.hs2[0] == product.hs2[1]:
+                            return 0.5
+                    except IndexError:
+                        return 0
                 return 0
 
             def __str__(self):
                 #return "HS-2: %s (%s)" %(self.hs2, self.label)
                 return "HS-2: %s" %self.hs2
-
 
 def import_company_data(filename):
     company_data = parse(filename)[0]
@@ -200,7 +270,7 @@ def parse(filename):
 def get_isic_data(assoc_table, company):
     return [assoc_table.get(code) for code in company.isic_codes]
 
-def main(association_table_path, company_data_path):
+def import_data(association_table_path, company_data_path):
     assoc_table = to_dict(import_association_table(association_table_path))
     company_data = to_Company(import_company_data(company_data_path))
     for company in company_data:
@@ -215,4 +285,28 @@ if __name__=="__main__":
     company_data_path = os.path.join(data_path, "20191216_Unternehmensverzeichnis_Toydata_2.xlsx")
     association_table_path = os.path.join(data_path, "20191216_Association_Table_2.xlsx")
     
-    main(association_table_path, company_data_path)
+    assoc_table, company_data = import_data(association_table_path, company_data_path)
+
+    checked = set([])
+    res = {}
+    for i in range(len(company_data)):
+        c1 = company_data[i]
+        for j in range(len(company_data)):
+            c2 = company_data[j]
+            #TODO necessary?
+            if (c1.name == c2.name):
+                continue
+            if (c1.name, c2.name) in checked:
+                continue
+            score = sum(c1.get_symbiosis_potential(c2, assoc_table))
+            vals = res.get(score, [])
+            vals.append((c1, c2))
+            res[score] = vals
+            checked.add((c1.name, c2.name))
+            checked.add((c2.name, c1.name))
+
+    for key, val in collections.OrderedDict(sorted(res.items())).items():
+        print("\n")
+        print(key)
+        for v in val:
+            print("%s --- %s" %(v[0].name, v[1].name))

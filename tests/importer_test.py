@@ -15,7 +15,7 @@ def test_association_table_import():
 
 
 def test_main():
-    assoc_table, company_data = symbiosis.importer.main(association_table_path, company_data_path)
+    assoc_table, company_data = symbiosis.importer.import_data(association_table_path, company_data_path)
     for company in company_data:
         print(company)
 
