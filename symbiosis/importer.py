@@ -8,7 +8,7 @@ import collections
 class Company:
 
     def __init__(self, row):
-        self.name = row[0]
+        self.name = row[0].replace("\n", " ")
         self.sector = row[1]
         self.products = [entry for entry in row[2].split("/")]
         self.isic_codes = [entry for entry in str(row[3]).split("/")]
