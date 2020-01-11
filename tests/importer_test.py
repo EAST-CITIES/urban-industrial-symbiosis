@@ -14,10 +14,10 @@ def test_association_table_import():
     assert(len(entries_with_thermal_energy) == 5)
 
 
-def test_main():
+def test_import_data():
     assoc_table, company_data = symbiosis.importer.import_data(association_table_path, company_data_path)
     for company in company_data:
         print(company)
 
 test_association_table_import()
-test_main()
+test_import_data()
