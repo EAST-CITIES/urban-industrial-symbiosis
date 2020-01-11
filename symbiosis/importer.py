@@ -3,7 +3,6 @@
 
 import os
 import openpyxl
-import collections
 import model
 
 def import_company_data(filename):
@@ -92,27 +91,3 @@ if __name__=="__main__":
     association_table_path = os.path.join(data_path, "20191216_Association_Table_2.xlsx")
     
     assoc_table, company_data = import_data(association_table_path, company_data_path)
-
-    checked = set([])
-    res = {}
-    for i in range(len(company_data)):
-        c1 = company_data[i]
-        for j in range(len(company_data)):
-            c2 = company_data[j]
-            #TODO necessary?
-            if (c1.name == c2.name):
-                continue
-            if (c1.name, c2.name) in checked:
-                continue
-            score = sum(c1.get_symbiosis_potential(c2, assoc_table))
-            vals = res.get(score, [])
-            vals.append((c1, c2))
-            res[score] = vals
-            checked.add((c1.name, c2.name))
-            checked.add((c2.name, c1.name))
-
-    for key, val in collections.OrderedDict(sorted(res.items())).items():
-        print("\n")
-        print(key)
-        for v in val:
-            print("%s --- %s" %(v[0].name, v[1].name))
