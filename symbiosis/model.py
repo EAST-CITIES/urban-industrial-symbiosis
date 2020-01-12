@@ -17,9 +17,13 @@ class Company:
 
     #return vector with scores for energy and material input and output overlaps
     #TODO (later) also use geo-locations / street networks for ranking
-    def get_symbiosis_potential(self, company, assoc_table):
-        potential = self.get_energy_flow_symbiosis_potential(company, assoc_table)
-        potential.extend(self.get_material_flow_symbiosis_potential(company, assoc_table))
+    def get_symbiosis_potential(self, company, assoc_table, 
+                                energy_flow_scaling_function, material_flow_scaling_function,
+                                energy_scoring_scheme, material_scoring_scheme):
+        potential = self.get_energy_flow_symbiosis_potential(company, assoc_table,
+                                energy_flow_scaling_function, energy_scoring_scheme)
+        potential.extend(self.get_material_flow_symbiosis_potential(company, assoc_table,
+                                material_flow_scaling_function, material_scoring_scheme))
         return potential
 
     def __str__(self):
@@ -27,21 +31,25 @@ class Company:
 
     #TODO there should only be one code - else how to combine conflicting flow specifications?
     #for now: use only first code
-    def get_energy_flow_symbiosis_potential(self, company, assoc_table):
+    #TODO use energy_flow_scoring_function: incorporate size information
+    def get_energy_flow_symbiosis_potential(self, company, assoc_table, 
+                                            energy_flow_scoring_function, energy_scoring_scheme):
         scores = [0]
         for code in self.isic_codes:
             for code2 in company.isic_codes:
-                scores.extend(assoc_table.get(code).energy.get_energy_flow_symbiosis_potential(assoc_table.get(code2).energy))
+                scores.extend(assoc_table.get(code).energy.get_energy_flow_symbiosis_potential(assoc_table.get(code2).energy, energy_scoring_scheme))
                 break
             break
         #print("energy flow symbiosis potential: " + (str(scores)))
         return scores
 
-    def get_material_flow_symbiosis_potential(self, company, assoc_table):
+    #TODO (see energy...)
+    def get_material_flow_symbiosis_potential(self, company, assoc_table,
+                                            material_flow_scoring_function, material_scoring_scheme):
         scores = [0]
         for code in self.isic_codes:
             for code2 in company.isic_codes:
-                scores.extend(assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials))
+                scores.extend(assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials, material_scoring_scheme))
         #print("material flow symbiosis potential: " + (str(scores)))
         return scores
 
@@ -84,13 +92,7 @@ class ISIC4:
             else:
                 raise ValueError(cell)
 
-        #for each energy type: score for input and output match / overlap
-        #TODO allow adding weights to different types?
-        def get_energy_flow_symbiosis_score(self, energy):
-            return sum(self. get_energy_flow_symbiosis_potential(energy))
-
-        #weighting_schema: [exact match input and output: 1; divergence of 1: 0.5; divergence of 2: 0.3]
-        def get_energy_flow_symbiosis_potential(self, energy, weighting_scheme = [1.0, 0.5, 0.3]):
+        def get_energy_flow_symbiosis_potential(self, energy, weighting_scheme):
             return [self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_scheme), self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_scheme), self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_scheme), self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_scheme), self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_scheme)]
 
         def get_potential(self, energy1_in, energy2_out, energy1_out, energy2_in, weighting_scheme):
@@ -132,9 +134,7 @@ class ISIC4:
             return [self.Product(code) for code in str(cell).split(";") if code != "None"]
 
         #for each product: score for input and output match / overlap (also consider similarity/compatibility...)
-        #weighting_scheme: [perfect_match(product and volume), partial_match (similar product, same volume), product_match (different volume), minimal_match (similar product, different volume)]
-        def get_material_flow_symbiosis_potential(self, material, weighting_scheme = [1, 0.3, 0.5, 0.1]):
-        #def get_product_matches(self, material, weighting_scheme):
+        def get_material_flow_symbiosis_potential(self, material, weighting_scheme):
             matches = []
             for product in self.hs_in_low:
                 for p in material.hs_out_low:

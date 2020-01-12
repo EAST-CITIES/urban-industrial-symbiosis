@@ -3,9 +3,14 @@
 
 import os
 import collections
-import model
 import importer
 from optparse import OptionParser
+
+ENERGY_FLOW_SCALING_FUNCTION = lambda x,y:x*y
+MATERIAL_FLOW_SCALING_FUNCTION = lambda x,y:x*y
+ENERGY_SCORING_SCHEME = [1.0, 0.5, 0.3]
+MATERIAL_SCORING_SCHEME = [1.0, 0.3, 0.5, 0.1]
+ACCUMULATION_FUNCTION = sum
 
 
 def get_user_input():
@@ -14,12 +19,44 @@ def get_user_input():
                   help="path to file containing company data", metavar="FILENAME_COMPANIES")
     parser.add_option("-a", "--association_table_path", dest="association_table_path",
                   help="path to file containing association tables")
+    parser.add_option("-e", "--energy_flow_scaling_function", dest="energy_flow_scaling_function", help="function determining the impact of the company size on energy flows")
+    parser.add_option("-m", "--material_flow_scaling_function", dest="material_flow_scaling_function", help="function determining the impact of the company size on material flows")
+    parser.add_option("-s", "--scoring_scheme_energy", dest="energy_scoring_scheme", help="scores for energy input and output overlaps: [exact match input and output, divergence of 1, divergence of 2]")
+    parser.add_option("-t", "--scoring_scheme_material", dest="material_scoring_scheme", help="scores for material input and output overlaps: [perfect_match(product and volume), partial_match (similar product, same volume), product_match (different volume), minimal_match (similar product, different volume)]")
+    parser.add_option("-f", "--function_score_accumulation", dest="accumulation_function", help="function to accumulate symbiosis potential scores into final score")
+
+    global ENERGY_FLOW_SCALING_FUNCTION
+    global MATERIAL_FLOW_SCALING_FUNCTION
+    global ENERGY_SCORING_SCHEME
+    global MATERIAL_SCORING_SCHEME
+    global ACCUMULATION_FUNCTION
+
 
     (options, args) = parser.parse_args()
     if not options.company_data_path:
         parser.error('path to file containing company data not given')
     if not options.association_table_path:
         parser.error('path to file containing association tables not given')
+    if not options.energy_flow_scaling_function:
+        print("energy_flow_scaling_function not given - using %s" %ENERGY_FLOW_SCALING_FUNCTION)
+    else:
+        ENERGY_FLOW_SCALING_FUNCTION = eval(options.energy_flow_scaling_function)
+    if not options.material_flow_scaling_function:
+        print("material_flow_scaling_function not given - using %s" %MATERIAL_FLOW_SCALING_FUNCTION)
+    else:
+        MATERIAL_FLOW_SCALING_FUNCTION = eval(options.material_flow_scaling_function)
+    if not options.energy_scoring_scheme:
+        print("scoring_scheme_energy not given - using %s" %ENERGY_SCORING_SCHEME)
+    else:
+        ENERGY_SCORING_SCHEME = eval(options.energy_scoring_scheme)
+    if not options.material_scoring_scheme:
+        print("scoring_scheme_material not given - using %s" %MATERIAL_SCORING_SCHEME)
+    else:
+        MATERIAL_SCORING_SCHEME = eval(options.material_scoring_scheme)
+    if not options.accumulation_function:
+        print("function_score_accumulation not given - using %s" %ACCUMULATION_FUNCTION)
+    else:
+        ACCUMULATION_FUNCTION = eval(options.accumulation_function)
     return (options.association_table_path, options.company_data_path)
 
 def get_data(file_paths):
@@ -37,7 +74,9 @@ def get_pairwise_scores(assoc_table, company_data):
                 continue
             if (c1.name, c2.name) in checked:
                 continue
-            score = sum(c1.get_symbiosis_potential(c2, assoc_table))
+            score = ACCUMULATION_FUNCTION(c1.get_symbiosis_potential(c2, assoc_table,
+                                        ENERGY_FLOW_SCALING_FUNCTION, MATERIAL_FLOW_SCALING_FUNCTION, 
+                                        ENERGY_SCORING_SCHEME, MATERIAL_SCORING_SCHEME))
             vals = res.get(score, [])
             vals.append((c1, c2))
             res[score] = vals
@@ -51,6 +90,7 @@ def pretty_print(score_dict):
         print(key)
         for v in val:
             print("%s --- %s" %(v[0].name, v[1].name))
+
 
 def main():
     assoc_table, company_data = get_data(get_user_input())
