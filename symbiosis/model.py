@@ -20,11 +20,11 @@ class Company:
     def get_symbiosis_potential(self, company, assoc_table, 
                                 energy_flow_scaling_function, material_flow_scaling_function,
                                 energy_scoring_scheme, material_scoring_scheme):
-        potential = self.get_energy_flow_symbiosis_potential(company, assoc_table,
+        potential_energy = self.get_energy_flow_symbiosis_potential(company, assoc_table,
                                 energy_flow_scaling_function, energy_scoring_scheme)
-        potential.extend(self.get_material_flow_symbiosis_potential(company, assoc_table,
-                                material_flow_scaling_function, material_scoring_scheme))
-        return potential
+        potential_material = self.get_material_flow_symbiosis_potential(company, assoc_table,
+                                material_flow_scaling_function, material_scoring_scheme)
+        return (potential_energy, potential_material)
 
     def __str__(self):
         return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s" %(self.name, self.sector, [str(p) for p in self.products], self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website)

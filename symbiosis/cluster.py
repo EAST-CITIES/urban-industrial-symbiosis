@@ -64,25 +64,31 @@ def get_data(file_paths):
 
 def get_pairwise_scores(assoc_table, company_data):
     checked = set([])
-    res = {}
+    res_energy = {}
+    res_material = {}
     for i in range(len(company_data)):
         c1 = company_data[i]
         for j in range(len(company_data)):
             c2 = company_data[j]
-            #TODO necessary?
+            # don't match entries with themselves
             if (c1.name == c2.name):
                 continue
             if (c1.name, c2.name) in checked:
                 continue
-            score = ACCUMULATION_FUNCTION(c1.get_symbiosis_potential(c2, assoc_table,
+            score_vec_energy, score_vec_material = c1.get_symbiosis_potential(c2, assoc_table,
                                         ENERGY_FLOW_SCALING_FUNCTION, MATERIAL_FLOW_SCALING_FUNCTION, 
-                                        ENERGY_SCORING_SCHEME, MATERIAL_SCORING_SCHEME))
-            vals = res.get(score, [])
-            vals.append((c1, c2))
-            res[score] = vals
+                                        ENERGY_SCORING_SCHEME, MATERIAL_SCORING_SCHEME)
+            score_energy = ACCUMULATION_FUNCTION(score_vec_energy)
+            score_material = ACCUMULATION_FUNCTION(score_vec_material)
+            vals_energy = res_energy.get(score_energy, [])
+            vals_material = res_material.get(score_material, [])
+            vals_energy.append((c1, c2))
+            vals_material.append((c1, c2))
+            res_energy[score_energy] = vals_energy
+            res_material[score_material] = vals_material
             checked.add((c1.name, c2.name))
             checked.add((c2.name, c1.name))
-    return collections.OrderedDict(sorted(res.items()))
+    return (collections.OrderedDict(sorted(res_energy.items())), collections.OrderedDict(sorted(res_material.items())))
 
 def pretty_print(score_dict):
     for key, val in score_dict.items():
@@ -94,7 +100,9 @@ def pretty_print(score_dict):
 
 def main():
     assoc_table, company_data = get_data(get_user_input())
-    pretty_print(get_pairwise_scores(assoc_table, company_data))
+    for score_dict in get_pairwise_scores(assoc_table, company_data):
+        pretty_print(score_dict)
+        print("\n\t\t\t+++\t\t\t\n")
 
 
 if __name__=="__main__":
