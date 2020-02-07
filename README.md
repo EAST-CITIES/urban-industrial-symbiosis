@@ -1,7 +1,8 @@
 # urban-industrial-symbiosis
 
 ## About
-(...)
+Rapid analysis of potential symbiotic exchange flows based on a simplified parameter set combined with a typology/classification database
+
 
 ## Usage
 To output pairwise symbiosis potential scores:
