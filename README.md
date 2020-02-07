@@ -31,10 +31,12 @@ Examples and standard values:
 #### Size
 The bigger a factory, the more energy and material is needed and the more products and waste are produced.
 * use proportional factor: a factory twice as big as another one will have twice as large values. 
+* choose one standard size; normalize all scores w.r.t their proportional relation to the standard
 
 #### Year of establishment at site
 The newer a factory, the lesser the energy consumption and waste output. 
 *  use current year as pivot point, add penalties to energy consumption and waste output values for older years (e.g. +0.2% per year of age)
+*  choose older year as pivot point, reduce energy consumption and waste output values for newer years (e.g. -0.2% per year)
 *  create bins: add penalty for certain groups, e.g. for all factories built before the year 2000, another penalty for all factories built before 1990 etc.
 
 #### (Location)
