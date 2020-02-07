@@ -42,16 +42,22 @@ Close and well connected factories should be preferred.
 
 ### Flow comparisons and thresholds
 
+#### Complementarity of flow volumes
+*  HS-[In|Out]-Low vs. HS-[In|Out]-High: assign a constant variable specifying the order of magnitude of "high" being greater than "low" similar to low, medium and high inputs and outputs being represented by values of 1, 2 and 3, respectively
+
+### Scoring
+*  define thresholds and scores for bins, e.g. if the difference between energy input and output of a certain type is in a pre-defined range, assign a pre-defined score
+  *  define relative scores, e.g. factory 1 outputs 30-50% of the energy needed by factory 2: assign score X
+*  use relative scores directly as discounting factors
+
 #### Similarity of materials
 *  require material codes to be equal
 *  use graph-based similarity measure 
 
 #### Scoring
-*  define thresholds and scores for bins e.g. two parent nodes equal: score 1. One parent node equal: score 2. 
+*  define thresholds and scores for bins, e.g. two parent nodes equal: score 1. One parent node equal: score 2. 
 *  continuous values: use output of similarity measure directly to normalize score (can be different from 1 when e.g. number of siblings is factored in by the measure)
-
-#### Complementarity of flow volumes
-*  
+*  combination of material similarity and volumes: how to weight small flow potential of very similar products vs. greater flow potential of less similar products?
 
 ## Troubleshooting
 *  import error:  
