@@ -13,12 +13,14 @@ Optional parameters:
 *  -s: scores for energy input and output overlaps: [exact match input and output, divergence of 1, divergence of 2]
 *  -t: scores for material input and output overlaps: [perfect_match(product and volume), partial_match (similar product, same volume), product_match (different volume), minimal_match (similar product, different volume)]
 *  -f: function to accumulate symbiosis potential scores into final score
+*  -b: buckets for different energy flow potential scores (how close do scores have to be in order to be treated as similar?): [upper boundary for closest score (exclusive), upper boundary for medium score (exclusive)]
 
 Examples and standard values:
 ```
 -s "[1.0, 0.5, 0.3]"  
 -t "[1.0, 0.3, 0.5, 0.1]"
 -f "sum"
+-b "[2, 5]"
 ```
 
 ## Scoring
@@ -47,7 +49,7 @@ Close and well connected factories should be preferred.
 
 ### Scoring
 *  define thresholds and scores for bins, e.g. if the difference between energy input and output of a certain type is in a pre-defined range, assign a pre-defined score
-  *  define relative scores, e.g. factory 1 outputs 30-50% of the energy needed by factory 2: assign score X
+    *  define relative scores, e.g. factory 1 outputs 30-50% of the energy needed by factory 2: assign score X
 *  use relative scores directly as discounting factors
 
 #### Similarity of materials
