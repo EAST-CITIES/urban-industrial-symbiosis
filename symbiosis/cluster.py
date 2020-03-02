@@ -5,17 +5,20 @@ import os
 import collections
 import importer
 import sys
+#import operator
+#from functools import reduce
 from optparse import OptionParser
 
 STANDARD_SIZE = 100.0
 STANDARD_YEAR = 1950
 ENERGY_FLOW_SCALING_FUNCTION_SIZE = lambda x:float(x) / STANDARD_SIZE
 MATERIAL_FLOW_SCALING_FUNCTION_SIZE = lambda x:float(x) / STANDARD_SIZE
-#reduce energy value by 0.2% for each year after standard year
-ENERGY_FLOW_SCALING_FUNCTION_YEAR = lambda year,value:value - (value * ((year - STANDARD_YEAR) * 0.2) / 100.0)
-MATERIAL_FLOW_SCALING_FUNCTION_YEAR = lambda year,value:value - (value * ((year - STANDARD_YEAR) * 0.2) / 100.0)
+#reduce energy value by 0.35% for each year after standard year
+ENERGY_FLOW_SCALING_FUNCTION_YEAR = lambda year,value:value - (value * ((year - STANDARD_YEAR) * 0.35) / 100.0)
+MATERIAL_FLOW_SCALING_FUNCTION_YEAR = lambda year,value:value - (value * ((year - STANDARD_YEAR) * 0.35) / 100.0)
 MATERIAL_SCORING_SCHEME = [1.0, 0.3]
-ACCUMULATION_FUNCTION = sum
+#ACCUMULATION_FUNCTION = lambda x:reduce(operator.__sub__, x)
+ACCUMULATION_FUNCTION = max
 
 def get_user_input():
     parser = OptionParser()
@@ -101,8 +104,8 @@ def get_pairwise_scores(assoc_table, company_data):
 
             vals_energy = res_energy.get(score_energy, [])
             vals_material = res_material.get(score_material, [])
-            vals_energy.append((c1, c2))
-            vals_material.append((c1, c2))
+            vals_energy.append((c1, c2, score_vec_energy))
+            vals_material.append((c1, c2, score_vec_material))
             res_energy[score_energy] = vals_energy
             res_material[score_material] = vals_material
             checked.add((c1.name, c2.name))
@@ -114,7 +117,7 @@ def pretty_print(score_dict):
         print("\n")
         print(key)
         for v in val:
-            print("%s --- %s" %(v[0].name, v[1].name))
+            print("%s --- %s\n%s" %(v[0].name, v[1].name, v[2]))
 
 
 def main():

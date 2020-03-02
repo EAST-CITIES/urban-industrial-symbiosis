@@ -22,7 +22,7 @@ Examples and standard values:
 ```
 -e "lambda x:float(x) / 100"
 -m "lambda x:float(x) / 100"
--f "sum"
+-f "max"
 -s "[1.0, 0.3]"  
 ```
 
