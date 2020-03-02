@@ -4,6 +4,7 @@
 import os
 import collections
 import importer
+import sys
 from optparse import OptionParser
 
 STANDARD_SIZE = 100.0
@@ -90,11 +91,11 @@ def get_pairwise_scores(assoc_table, company_data):
                                         MATERIAL_SCORING_SCHEME)
             if not score_vec_energy:
                 #sum of empty list (== no potential) is 0
-                score_energy = -1000
+                score_energy = -1 * sys.maxsize
             else:
                 score_energy = ACCUMULATION_FUNCTION(score_vec_energy)
             if not score_vec_material:
-                score_material = -1000
+                score_material = -1 * sys.maxsize
             else:
                 score_material = ACCUMULATION_FUNCTION(score_vec_material)
 

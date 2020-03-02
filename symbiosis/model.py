@@ -143,42 +143,51 @@ class ISIC4:
             # hs_low == hs_high / 5
             # hs_out == hs_out_high
             # flow == flow_value * ENERGY_FLOW_SCALING_FUNCTION(size)
+            score_1_equal = scaling_function_year(weighting_scheme[0] * scaling_function_size(size1), year1)            
+            score_1_similar = scaling_function_year(weighting_scheme[1] * scaling_function_size(size1), year1)            
+            score_2_equal = scaling_function_year(weighting_scheme[0] * scaling_function_size(size2), year2)            
+            score_2_similar = scaling_function_year(weighting_scheme[1] * scaling_function_size(size2), year2)            
+
+            score_1_equal_high = scaling_function_year(weighting_scheme[0] * scaling_function_size(size1) *5, year1)            
+            score_1_similar_high = scaling_function_year(weighting_scheme[1] * scaling_function_size(size1) *5, year1)
+            score_2_equal_high = scaling_function_year(weighting_scheme[0] * scaling_function_size(size2) *5, year2)            
+            score_2_similar_high = scaling_function_year(weighting_scheme[1] * scaling_function_size(size2) *5, year2)
             
             for product in self.hs_in_low:
                 for p in material.hs_out_low:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
+                        matches.append(abs(score_1_equal - score_2_equal))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
+                        matches.append(abs(score_1_similar - score_2_similar))
 
                 for p in material.hs_out_products:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2) * 5))))
+                        matches.append(abs(score_1_equal - score_2_equal_high))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2) * 5))))
+                        matches.append(abs(score_1_similar - score_2_similar_high))
 
                 for p in material.hs_out_high:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2) * 5))))
+                        matches.append(abs(score_1_equal - score_2_equal_high))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2) * 5))))
+                        matches.append(abs(score_1_similar - score_2_similar_high))
 
             for product in self.hs_in_high:
                 for p in material.hs_out_high:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
+                        matches.append(abs(score_1_equal_high - score_2_equal_high))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
+                        matches.append(abs(score_1_similar_high - score_2_similar_high))
                 for p in material.hs_out_products:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
+                        matches.append(abs(score_1_equal_high - score_2_equal_high))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
+                        matches.append(abs(score_1_similar_high - score_2_similar_high))
                 for p in material.hs_out_low:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) * 5 - scaling_function_size(size2))))) 
+                        matches.append(abs(score_1_equal_high - score_2_equal)) 
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) * 5 - scaling_function_size(size2))))) 
+                        matches.append(abs(score_1_similar_high - score_2_similar)) 
             return [score * -1 for score in matches] #the numbers are the differences; but the scale should be: the higher the better (smaller differences are better)
 
         class Product:
