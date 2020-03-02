@@ -33,7 +33,6 @@ class Company:
 
     #TODO there should only be one code - else how to combine conflicting flow specifications?
     #for now: use only first code
-    #TODO use energy_flow_scoring_function: incorporate size information
     def get_energy_flow_symbiosis_potential(self, company, assoc_table, 
                                             energy_flow_scaling_function, energy_scoring_scheme,
                                             energy_buckets):
@@ -110,9 +109,10 @@ class ISIC4:
             if energy1_in + energy2_out + energy1_out + energy2_in == 0:
                 return 0
             p = 0
-            size_factor = weighting_function(size1, size2)
+            size_factor_1 = weighting_function(size1)
+            size_factor_2 = weighting_function(size2)
             
-            div_in1_out2 = abs((size_factor * energy1_in) - energy2_out)
+            div_in1_out2 = abs((size_factor_1 * energy1_in) - size_factor_2 * energy2_out)
             if div_in1_out2 < energy_buckets[0]:
                 p = weighting_scheme[0]
             elif div_in1_out2 < energy_buckets[1]:
@@ -120,7 +120,7 @@ class ISIC4:
             elif div_in1_out2 > energy_buckets[1]:
                 p = weighting_scheme[2]
 
-            div_in2_out1 = abs((size_factor * energy1_out) - energy2_in)
+            div_in2_out1 = abs((size_factor_1 * energy1_out) - size_factor_2 * energy2_in)
             if div_in2_out1 < energy_buckets[0]:
                 p += weighting_scheme[0]
             elif div_in2_out1 < energy_buckets[1]:

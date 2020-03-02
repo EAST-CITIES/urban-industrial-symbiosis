@@ -6,8 +6,9 @@ import collections
 import importer
 from optparse import OptionParser
 
-ENERGY_FLOW_SCALING_FUNCTION = lambda x,y:float(x) / y
-MATERIAL_FLOW_SCALING_FUNCTION = lambda x,y:float(x) / y
+STANDARD_SIZE = 100.0
+ENERGY_FLOW_SCALING_FUNCTION = lambda x:float(x) / STANDARD_SIZE
+MATERIAL_FLOW_SCALING_FUNCTION = lambda x,y:float(x) / STANDARD_SIZE
 ENERGY_SCORING_SCHEME = [1.0, 0.5, 0.3]
 MATERIAL_SCORING_SCHEME = [1.0, 0.3, 0.5, 0.1]
 ACCUMULATION_FUNCTION = sum
