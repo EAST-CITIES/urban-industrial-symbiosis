@@ -13,6 +13,8 @@ python symbiosis/cluster.py -a <path to xlsx file containing the association tab
 Optional parameters:
 *  -e: energy flow scaling function; determines the impact of the company size on energy flow values
 *  -m: material flow scaling function; determines the impact of the company size on material flow values
+*  -y: energy flow scaling function; determines the impact of the factory's year of establishment on energy flow values
+*  -z: material flow scaling function; determines the impact of the factory's year of establishment on material flow values
 *  -f: function to accumulate symbiosis potential scores into final score
 *  -s: scoring scheme materials; scores for input and output overlaps depending on whether materials are equal or similar
 
