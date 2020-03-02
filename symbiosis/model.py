@@ -18,12 +18,14 @@ class Company:
     #return vector with scores for energy and material input and output overlaps
     #TODO (later) also use geo-locations / street networks for ranking
     def get_symbiosis_potential(self, company, assoc_table, 
-                                energy_flow_scaling_function, material_flow_scaling_function,
+                                energy_flow_scaling_function_size, material_flow_scaling_function_size,
+                                energy_flow_scaling_function_year, material_flow_scaling_function_year,
                                 material_scoring_scheme):
         potential_energy = self.get_energy_flow_symbiosis_potential(company, assoc_table,
-                                energy_flow_scaling_function)
+                                energy_flow_scaling_function_size, energy_flow_scaling_function_year)
         potential_material = self.get_material_flow_symbiosis_potential(company, assoc_table,
-                                material_flow_scaling_function, material_scoring_scheme)
+                                material_flow_scaling_function_size, material_flow_scaling_function_year, 
+                                material_scoring_scheme)
         return (potential_energy, potential_material)
 
     def __str__(self):
@@ -32,13 +34,14 @@ class Company:
     #TODO there should only be one code - else how to combine conflicting flow specifications?
     #for now: use only first code
     def get_energy_flow_symbiosis_potential(self, company, assoc_table, 
-                                            energy_flow_scaling_function):
+                                            energy_flow_scaling_function_size,
+                                            energy_flow_scaling_function_year):
         scores = []
         for code in self.isic_codes:
             for code2 in company.isic_codes:
                 scores.extend(assoc_table.get(code).energy.get_energy_flow_symbiosis_potential(
-                    assoc_table.get(code2).energy, energy_flow_scaling_function, 
-                    self.size, company.size))
+                    assoc_table.get(code2).energy, energy_flow_scaling_function_size, 
+                    energy_flow_scaling_function_year, self.size, company.size, self.year, company.year))
                 break
             break
         #print("energy flow symbiosis potential: " + (str(scores)))
@@ -46,11 +49,13 @@ class Company:
 
     #TODO (see energy...)
     def get_material_flow_symbiosis_potential(self, company, assoc_table,
-                                            material_flow_scoring_function, material_scoring_scheme):
+                                            material_flow_scoring_function_size, material_flow_scoring_function_year, 
+                                            material_scoring_scheme):
         scores = []
         for code in self.isic_codes:
             for code2 in company.isic_codes:
-                scores.extend(assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials, material_flow_scoring_function, material_scoring_scheme, self.size, company.size))
+                scores.extend(assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials, material_flow_scoring_function_size, material_flow_scoring_function_year, 
+                material_scoring_scheme, self.size, company.size, self.year, company.year))
         #print("material flow symbiosis potential: " + (str(scores)))
         return scores
 
@@ -93,22 +98,23 @@ class ISIC4:
             else:
                 raise ValueError(cell)
 
-        def get_energy_flow_symbiosis_potential(self, energy, weighting_function, size1, size2):
-            return [score for score in [self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_function, size1, size2), 
-                    self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_function, size1, size2), 
-                    self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_function, size1, size2), 
-                    self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_function, size1, size2), 
-                    self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_function, size1, size2)] if score]
+        def get_energy_flow_symbiosis_potential(self, energy, weighting_function_size, weighting_function_year, 
+                                                size1, size2, year1, year2):
+            return [score for score in [self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2), 
+                    self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2), 
+                    self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2), 
+                    self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2), 
+                    self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)] if score]
 
         def get_potential(self, energy1_in, energy2_out, energy1_out, energy2_in, 
-                            weighting_function, size1, size2):
+                            weighting_function_size, weighting_function_year, size1, size2, year1, year2):
             if energy1_in + energy2_out + energy1_out + energy2_in == 0:
                 return None
-            size_factor_1 = weighting_function(size1)
-            size_factor_2 = weighting_function(size2)
+            size_factor_1 = weighting_function_size(size1)
+            size_factor_2 = weighting_function_size(size2) 
             
-            div_in1_out2 = -1 * abs((size_factor_1 * energy1_in) - size_factor_2 * energy2_out)
-            div_in2_out1 = -1 * abs((size_factor_1 * energy1_out) - size_factor_2 * energy2_in)
+            div_in1_out2 = -1 * abs(weighting_function_year((size_factor_1 * energy1_in), year1) - weighting_function_year((size_factor_2 * energy2_out), year2))
+            div_in2_out1 = -1 * abs(weighting_function_year((size_factor_1 * energy1_out), year1) - weighting_function_year((size_factor_2 * energy2_in), year2))
 
             #return the better of the two scores (direction of the flow does not matter for the score)
             return max(div_in1_out2, div_in2_out1)
@@ -131,7 +137,8 @@ class ISIC4:
             return [self.Product(code) for code in str(cell).split(";") if code != "None"]
 
         #for each product: score for input and output match / overlap (also consider similarity/compatibility...)
-        def get_material_flow_symbiosis_potential(self, material, scaling_function, weighting_scheme, size1, size2):
+        def get_material_flow_symbiosis_potential(self, material, scaling_function_size, scaling_function_year, 
+                                                    weighting_scheme, size1, size2, year1, year2):
             matches = []
             # hs_low == hs_high / 5
             # hs_out == hs_out_high
@@ -140,38 +147,38 @@ class ISIC4:
             for product in self.hs_in_low:
                 for p in material.hs_out_low:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * abs((scaling_function(size1) - scaling_function(size2))))
+                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * abs((scaling_function(size1) - scaling_function(size2))))
+                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
 
                 for p in material.hs_out_products:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * abs((scaling_function(size1) - scaling_function(size2) * 5)))
+                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2) * 5))))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * abs((scaling_function(size1) - scaling_function(size2) * 5)))
+                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2) * 5))))
 
                 for p in material.hs_out_high:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * abs((scaling_function(size1) - scaling_function(size2) * 5)))
+                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2) * 5))))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * abs((scaling_function(size1) - scaling_function(size2) * 5)))
+                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2) * 5))))
 
             for product in self.hs_in_high:
                 for p in material.hs_out_high:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * abs((scaling_function(size1) - scaling_function(size2))))
+                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * abs((scaling_function(size1) - scaling_function(size2))))
+                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
                 for p in material.hs_out_products:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * abs((scaling_function(size1) - scaling_function(size2))))
+                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * abs((scaling_function(size1) - scaling_function(size2))))
+                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) - scaling_function_size(size2)))))
                 for p in material.hs_out_low:
                     if product.similarity(p) == 1:
-                        matches.append(weighting_scheme[0] * abs((scaling_function(size1) * 5 - scaling_function(size2)))) 
+                        matches.append(weighting_scheme[0] * (abs((scaling_function_size(size1) * 5 - scaling_function_size(size2))))) 
                     elif product.similarity(p) == 0.5:
-                        matches.append(weighting_scheme[1] * abs((scaling_function(size1) * 5 - scaling_function(size2)))) 
+                        matches.append(weighting_scheme[1] * (abs((scaling_function_size(size1) * 5 - scaling_function_size(size2))))) 
             return [score * -1 for score in matches] #the numbers are the differences; but the scale should be: the higher the better (smaller differences are better)
 
         class Product:

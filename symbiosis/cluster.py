@@ -7,8 +7,12 @@ import importer
 from optparse import OptionParser
 
 STANDARD_SIZE = 100.0
-ENERGY_FLOW_SCALING_FUNCTION = lambda x:float(x) / STANDARD_SIZE
-MATERIAL_FLOW_SCALING_FUNCTION = lambda x:float(x) / STANDARD_SIZE
+STANDARD_YEAR = 1950
+ENERGY_FLOW_SCALING_FUNCTION_SIZE = lambda x:float(x) / STANDARD_SIZE
+MATERIAL_FLOW_SCALING_FUNCTION_SIZE = lambda x:float(x) / STANDARD_SIZE
+#reduce energy value by 0.2% for each year after standard year
+ENERGY_FLOW_SCALING_FUNCTION_YEAR = lambda year,value:value - (value * ((year - STANDARD_YEAR) * 0.2) / 100.0)
+MATERIAL_FLOW_SCALING_FUNCTION_YEAR = lambda year,value:value - (value * ((year - STANDARD_YEAR) * 0.2) / 100.0)
 MATERIAL_SCORING_SCHEME = [1.0, 0.3]
 ACCUMULATION_FUNCTION = sum
 
@@ -18,13 +22,17 @@ def get_user_input():
                   help="path to file containing company data", metavar="FILENAME_COMPANIES")
     parser.add_option("-a", "--association_table_path", dest="association_table_path",
                   help="path to file containing association tables")
-    parser.add_option("-e", "--energy_flow_scaling_function", dest="energy_flow_scaling_function", help="function determining the impact of the company size on energy flows")
-    parser.add_option("-m", "--material_flow_scaling_function", dest="material_flow_scaling_function", help="function determining the impact of the company size on material flows")
+    parser.add_option("-e", "--energy_flow_scaling_function_size", dest="energy_flow_scaling_function_size", help="function determining the impact of the company size on energy flows")
+    parser.add_option("-m", "--material_flow_scaling_function_size", dest="material_flow_scaling_function_size", help="function determining the impact of the company size on material flows")
+    parser.add_option("-y", "--energy_flow_scaling_function_year", dest="energy_flow_scaling_function_year", help="function determining the impact of the company year of establishment on energy flows")
+    parser.add_option("-z", "--material_flow_scaling_function_year", dest="material_flow_scaling_function_year", help="function determining the impact of the company year of establishment on material flows")
     parser.add_option("-s", "--scoring_scheme_material", dest="material_scoring_scheme", help="scores for material input and output overlaps: [equal products, similar products]")
     parser.add_option("-f", "--function_score_accumulation", dest="accumulation_function", help="function to accumulate symbiosis potential scores into final score")
 
-    global ENERGY_FLOW_SCALING_FUNCTION
-    global MATERIAL_FLOW_SCALING_FUNCTION
+    global ENERGY_FLOW_SCALING_FUNCTION_SIZE
+    global ENERGY_FLOW_SCALING_FUNCTION_YEAR
+    global MATERIAL_FLOW_SCALING_FUNCTION_SIZE
+    global MATERIAL_FLOW_SCALING_FUNCTION_YEAR
     global MATERIAL_SCORING_SCHEME
     global ACCUMULATION_FUNCTION
 
@@ -33,14 +41,22 @@ def get_user_input():
         parser.error('path to file containing company data not given')
     if not options.association_table_path:
         parser.error('path to file containing association tables not given')
-    if not options.energy_flow_scaling_function:
-        print("energy_flow_scaling_function not given - using %s" %ENERGY_FLOW_SCALING_FUNCTION)
+    if not options.energy_flow_scaling_function_size:
+        print("energy_flow_scaling_function_size not given - using %s" %ENERGY_FLOW_SCALING_FUNCTION_SIZE)
     else:
-        ENERGY_FLOW_SCALING_FUNCTION = eval(options.energy_flow_scaling_function)
-    if not options.material_flow_scaling_function:
-        print("material_flow_scaling_function not given - using %s" %MATERIAL_FLOW_SCALING_FUNCTION)
+        ENERGY_FLOW_SCALING_FUNCTION_SIZE = eval(options.energy_flow_scaling_function_size)
+    if not options.material_flow_scaling_function_size:
+        print("material_flow_scaling_function_size not given - using %s" %MATERIAL_FLOW_SCALING_FUNCTION_SIZE)
     else:
-        MATERIAL_FLOW_SCALING_FUNCTION = eval(options.material_flow_scaling_function)
+        MATERIAL_FLOW_SCALING_FUNCTION_SIZE = eval(options.material_flow_scaling_function_size)
+    if not options.material_flow_scaling_function_year:
+        print("material_flow_scaling_function_year not given - using %s" %MATERIAL_FLOW_SCALING_FUNCTION_YEAR)
+    else:
+        MATERIAL_FLOW_SCALING_FUNCTION_YEAR = eval(options.material_flow_scaling_function_year)
+    if not options.energy_flow_scaling_function_year:
+        print("energy_flow_scaling_function_year not given - using %s" %ENERGY_FLOW_SCALING_FUNCTION_YEAR)
+    else:
+        ENERGY_FLOW_SCALING_FUNCTION_YEAR = eval(options.energy_flow_scaling_function_year)
     if not options.material_scoring_scheme:
         print("scoring_scheme_material not given - using %s" %MATERIAL_SCORING_SCHEME)
     else:
@@ -68,7 +84,9 @@ def get_pairwise_scores(assoc_table, company_data):
             if (c1.name, c2.name) in checked:
                 continue
             score_vec_energy, score_vec_material = c1.get_symbiosis_potential(c2, assoc_table,
-                                        ENERGY_FLOW_SCALING_FUNCTION, MATERIAL_FLOW_SCALING_FUNCTION, 
+                                        ENERGY_FLOW_SCALING_FUNCTION_SIZE, MATERIAL_FLOW_SCALING_FUNCTION_SIZE, 
+                                        ENERGY_FLOW_SCALING_FUNCTION_YEAR,
+                                        MATERIAL_FLOW_SCALING_FUNCTION_YEAR,
                                         MATERIAL_SCORING_SCHEME)
             if not score_vec_energy:
                 #sum of empty list (== no potential) is 0
