@@ -15,18 +15,18 @@ class Company:
         self.year = row[8]
         self.website = row[9]
 
-    #return vector with scores for energy and material input and output overlaps
+    #return vector with scores for energy and material input and output overlaps (total numbers + percentages)
     #TODO (later) also use geo-locations / street networks for ranking
     def get_symbiosis_potential(self, company, assoc_table, 
                                 energy_flow_scaling_function_size, material_flow_scaling_function_size,
                                 energy_flow_scaling_function_year, material_flow_scaling_function_year,
                                 material_scoring_scheme):
-        potential_energy = self.get_energy_flow_symbiosis_potential(company, assoc_table,
+        potential_energy_abs, potential_energy_rel = self.get_energy_flow_symbiosis_potential(company, assoc_table,
                                 energy_flow_scaling_function_size, energy_flow_scaling_function_year)
-        potential_material = self.get_material_flow_symbiosis_potential(company, assoc_table,
+        potential_material_abs, potential_material_rel = self.get_material_flow_symbiosis_potential(company, assoc_table,
                                 material_flow_scaling_function_size, material_flow_scaling_function_year, 
                                 material_scoring_scheme)
-        return (potential_energy, potential_material)
+        return (potential_energy_abs, potential_energy_rel, potential_material_abs, potential_material_rel)
 
     def __str__(self):
         return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s" %(self.name, self.sector, [str(p) for p in self.products], self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website)
@@ -45,19 +45,22 @@ class Company:
                 break
             break
         #print("energy flow symbiosis potential: " + (str(scores)))
-        return scores
+        return [[score[0] for score in scores], [score[1] for score in scores]]
 
     #TODO (see energy...)
     def get_material_flow_symbiosis_potential(self, company, assoc_table,
                                             material_flow_scoring_function_size, material_flow_scoring_function_year, 
                                             material_scoring_scheme):
-        scores = []
+        scores_abs = []
+        scores_rel = []
         for code in self.isic_codes:
             for code2 in company.isic_codes:
-                scores.extend(assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials, material_flow_scoring_function_size, material_flow_scoring_function_year, 
-                material_scoring_scheme, self.size, company.size, self.year, company.year))
+                scores = assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials, material_flow_scoring_function_size, material_flow_scoring_function_year, 
+                material_scoring_scheme, self.size, company.size, self.year, company.year)
+        scores_abs.extend(scores[0])
+        scores_rel.extend(scores[1])
         #print("material flow symbiosis potential: " + (str(scores)))
-        return scores
+        return [scores_abs, scores_rel]
 
 class ISIC4:
 
@@ -113,11 +116,16 @@ class ISIC4:
             size_factor_1 = weighting_function_size(size1)
             size_factor_2 = weighting_function_size(size2) 
             
-            div_in1_out2 = -1 * abs(weighting_function_year((size_factor_1 * energy1_in), year1) - weighting_function_year((size_factor_2 * energy2_out), year2))
-            div_in2_out1 = -1 * abs(weighting_function_year((size_factor_1 * energy1_out), year1) - weighting_function_year((size_factor_2 * energy2_in), year2))
+            div_in1_out2_abs = weighting_function_year((size_factor_1 * energy1_in), year1) - float(weighting_function_year((size_factor_2 * energy2_out), year2))
+            div_in1_out2_rel = (weighting_function_year((size_factor_2 * energy2_out), year2)) / float(weighting_function_year((size_factor_1 * energy1_in), year1))
+            #div_in2_out1 = weighting_function_year((size_factor_1 * energy1_out), year1) / float(weighting_function_year((size_factor_2 * energy2_in), year2))
 
-            #return the better of the two scores (direction of the flow does not matter for the score)
-            return max(div_in1_out2, div_in2_out1)
+            #old: return the better of the two scores (direction of the flow does not matter for the score)
+            #new: return both scores: determine how much one factory can cover of the other one's input. Compute separately
+            #return max(div_in1_out2, div_in2_out1)
+            #return obsolute score and percentage
+            #cap percentage at 1: more than 100% is irrelevant
+            return(div_in1_out2_abs, div_in1_out2_rel)
 
 
     class Material:
@@ -139,56 +147,69 @@ class ISIC4:
         #for each product: score for input and output match / overlap (also consider similarity/compatibility...)
         def get_material_flow_symbiosis_potential(self, material, scaling_function_size, scaling_function_year, 
                                                     weighting_scheme, size1, size2, year1, year2):
-            matches = []
+            matches_abs = []
+            matches_rel = []
             # hs_low == hs_high / 5
             # hs_out == hs_out_high
             # flow == flow_value * ENERGY_FLOW_SCALING_FUNCTION(size)
-            score_1_equal = scaling_function_year(weighting_scheme[0] * scaling_function_size(size1), year1)            
-            score_1_similar = scaling_function_year(weighting_scheme[1] * scaling_function_size(size1), year1)            
-            score_2_equal = scaling_function_year(weighting_scheme[0] * scaling_function_size(size2), year2)            
-            score_2_similar = scaling_function_year(weighting_scheme[1] * scaling_function_size(size2), year2)            
+            score_1_equal = float(scaling_function_year(weighting_scheme[0] * scaling_function_size(size1), year1))
+            score_1_similar = float(scaling_function_year(weighting_scheme[1] * scaling_function_size(size1), year1))       
+            score_2_equal = float(scaling_function_year(weighting_scheme[0] * scaling_function_size(size2), year2))
+            score_2_similar = float(scaling_function_year(weighting_scheme[1] * scaling_function_size(size2), year2))       
 
-            score_1_equal_high = scaling_function_year(weighting_scheme[0] * scaling_function_size(size1) *5, year1)            
-            score_1_similar_high = scaling_function_year(weighting_scheme[1] * scaling_function_size(size1) *5, year1)
-            score_2_equal_high = scaling_function_year(weighting_scheme[0] * scaling_function_size(size2) *5, year2)            
-            score_2_similar_high = scaling_function_year(weighting_scheme[1] * scaling_function_size(size2) *5, year2)
+            score_1_equal_high = float(scaling_function_year(weighting_scheme[0] * scaling_function_size(size1) *5, year1))
+            score_1_similar_high = float(scaling_function_year(weighting_scheme[1] * scaling_function_size(size1) *5, year1))
+            score_2_equal_high = float(scaling_function_year(weighting_scheme[0] * scaling_function_size(size2) *5, year2))
+            score_2_similar_high = float(scaling_function_year(weighting_scheme[1] * scaling_function_size(size2) *5, year2))
             
             for product in self.hs_in_low:
                 for p in material.hs_out_low:
                     if product.similarity(p) == 1:
-                        matches.append(abs(score_1_equal - score_2_equal))
+                        matches_abs.append(score_1_equal - score_2_equal)
+                        matches_rel.append(score_2_equal / score_1_equal)
                     elif product.similarity(p) == 0.5:
-                        matches.append(abs(score_1_similar - score_2_similar))
+                        matches_abs.append(score_1_similar - score_2_similar)
+                        matches_rel.append(score_2_similar / score_1_similar)
 
                 for p in material.hs_out_products:
                     if product.similarity(p) == 1:
-                        matches.append(abs(score_1_equal - score_2_equal_high))
+                        matches_abs.append(score_1_equal - score_2_equal_high)
+                        matches_rel.append(score_2_equal / score_1_equal_high)
                     elif product.similarity(p) == 0.5:
-                        matches.append(abs(score_1_similar - score_2_similar_high))
+                        matches_abs.append(score_1_similar - score_2_similar_high)
+                        matches_rel.append(score_2_similar_high / score_1_similar)
 
                 for p in material.hs_out_high:
                     if product.similarity(p) == 1:
-                        matches.append(abs(score_1_equal - score_2_equal_high))
+                        matches_abs.append(score_1_equal - score_2_equal_high)
+                        matches_rel.append(score_2_equal_high / score_1_equal)
                     elif product.similarity(p) == 0.5:
-                        matches.append(abs(score_1_similar - score_2_similar_high))
+                        matches_abs.append(score_1_similar - score_2_similar_high)
+                        matches_rel.append(score_2_similar_high / score_1_similar)
 
             for product in self.hs_in_high:
                 for p in material.hs_out_high:
                     if product.similarity(p) == 1:
-                        matches.append(abs(score_1_equal_high - score_2_equal_high))
+                        matches_abs.append(score_1_equal_high - score_2_equal_high)
+                        matches_rel.append(score_2_equal_high / score_1_equal_high)
                     elif product.similarity(p) == 0.5:
-                        matches.append(abs(score_1_similar_high - score_2_similar_high))
+                        matches_abs.append(score_1_similar_high - score_2_similar_high)
+                        matches_rel.append(score_2_similar_high / score_1_similar_high)
                 for p in material.hs_out_products:
                     if product.similarity(p) == 1:
-                        matches.append(abs(score_1_equal_high - score_2_equal_high))
+                        matches_abs.append(score_1_equal_high - score_2_equal_high)
+                        matches_rel.append(score_2_equal_high / score_1_equal_high)
                     elif product.similarity(p) == 0.5:
-                        matches.append(abs(score_1_similar_high - score_2_similar_high))
+                        matches_abs.append(score_1_similar_high - score_2_similar_high)
+                        matches_rel.append(score_2_similar_high / score_1_similar_high)
                 for p in material.hs_out_low:
                     if product.similarity(p) == 1:
-                        matches.append(abs(score_1_equal_high - score_2_equal)) 
+                        matches_abs.append(score_1_equal_high - score_2_equal)
+                        matches_rel.append(score_2_equal / score_1_equal_high) 
                     elif product.similarity(p) == 0.5:
-                        matches.append(abs(score_1_similar_high - score_2_similar)) 
-            return [score * -1 for score in matches] #the numbers are the differences; but the scale should be: the higher the better (smaller differences are better)
+                        matches_abs.append(score_1_similar_high - score_2_similar)
+                        matches_rel.append(score_2_similar / score_1_similar_high) 
+            return (matches_abs, matches_rel)
 
         class Product:
 
