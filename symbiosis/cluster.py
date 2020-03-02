@@ -8,9 +8,9 @@ from optparse import OptionParser
 
 STANDARD_SIZE = 100.0
 ENERGY_FLOW_SCALING_FUNCTION = lambda x:float(x) / STANDARD_SIZE
-MATERIAL_FLOW_SCALING_FUNCTION = lambda x,y:float(x) / STANDARD_SIZE
+MATERIAL_FLOW_SCALING_FUNCTION = lambda x:float(x) / STANDARD_SIZE
 ENERGY_SCORING_SCHEME = [1.0, 0.5, 0.3]
-MATERIAL_SCORING_SCHEME = [1.0, 0.3, 0.5, 0.1]
+MATERIAL_SCORING_SCHEME = [1.0, 0.3]
 ACCUMULATION_FUNCTION = sum
 ENERGY_BUCKETS = [2, 5]
 
@@ -24,7 +24,7 @@ def get_user_input():
     parser.add_option("-b", "--energy_flow_buckets", dest="energy_flow_buckets", help="buckets for different energy flow potential scores (how close do scores have to be in order to be treated as similar?): [upper boundary for closest score (exclusive), upper boundary for medium score (exclusive)]")
     parser.add_option("-m", "--material_flow_scaling_function", dest="material_flow_scaling_function", help="function determining the impact of the company size on material flows")
     parser.add_option("-s", "--scoring_scheme_energy", dest="energy_scoring_scheme", help="scores for energy input and output overlaps: [exact match input and output, divergence of 1, divergence of 2]")
-    parser.add_option("-t", "--scoring_scheme_material", dest="material_scoring_scheme", help="scores for material input and output overlaps: [perfect_match(product and volume), partial_match (similar product, same volume), product_match (different volume), minimal_match (similar product, different volume)]")
+    parser.add_option("-t", "--scoring_scheme_material", dest="material_scoring_scheme", help="scores for material input and output overlaps: [equal products, similar products]")
     parser.add_option("-f", "--function_score_accumulation", dest="accumulation_function", help="function to accumulate symbiosis potential scores into final score")
 
     global ENERGY_FLOW_SCALING_FUNCTION
@@ -85,8 +85,16 @@ def get_pairwise_scores(assoc_table, company_data):
                                         ENERGY_FLOW_SCALING_FUNCTION, MATERIAL_FLOW_SCALING_FUNCTION, 
                                         ENERGY_SCORING_SCHEME, MATERIAL_SCORING_SCHEME,
                                         ENERGY_BUCKETS)
-            score_energy = ACCUMULATION_FUNCTION(score_vec_energy)
-            score_material = ACCUMULATION_FUNCTION(score_vec_material)
+            if not score_vec_energy:
+                #sum of empty list (== no potential) is 0
+                score_energy = -1000
+            else:
+                score_energy = ACCUMULATION_FUNCTION(score_vec_energy)
+            if not score_vec_material:
+                score_material = -1000
+            else:
+                score_material = ACCUMULATION_FUNCTION(score_vec_material)
+
             vals_energy = res_energy.get(score_energy, [])
             vals_material = res_material.get(score_material, [])
             vals_energy.append((c1, c2))
