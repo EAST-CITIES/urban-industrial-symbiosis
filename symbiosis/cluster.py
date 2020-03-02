@@ -9,10 +9,8 @@ from optparse import OptionParser
 STANDARD_SIZE = 100.0
 ENERGY_FLOW_SCALING_FUNCTION = lambda x:float(x) / STANDARD_SIZE
 MATERIAL_FLOW_SCALING_FUNCTION = lambda x:float(x) / STANDARD_SIZE
-ENERGY_SCORING_SCHEME = [1.0, 0.5, 0.3]
 MATERIAL_SCORING_SCHEME = [1.0, 0.3]
 ACCUMULATION_FUNCTION = sum
-ENERGY_BUCKETS = [2, 5]
 
 def get_user_input():
     parser = OptionParser()
@@ -21,18 +19,14 @@ def get_user_input():
     parser.add_option("-a", "--association_table_path", dest="association_table_path",
                   help="path to file containing association tables")
     parser.add_option("-e", "--energy_flow_scaling_function", dest="energy_flow_scaling_function", help="function determining the impact of the company size on energy flows")
-    parser.add_option("-b", "--energy_flow_buckets", dest="energy_flow_buckets", help="buckets for different energy flow potential scores (how close do scores have to be in order to be treated as similar?): [upper boundary for closest score (exclusive), upper boundary for medium score (exclusive)]")
     parser.add_option("-m", "--material_flow_scaling_function", dest="material_flow_scaling_function", help="function determining the impact of the company size on material flows")
-    parser.add_option("-s", "--scoring_scheme_energy", dest="energy_scoring_scheme", help="scores for energy input and output overlaps: [exact match input and output, divergence of 1, divergence of 2]")
-    parser.add_option("-t", "--scoring_scheme_material", dest="material_scoring_scheme", help="scores for material input and output overlaps: [equal products, similar products]")
+    parser.add_option("-s", "--scoring_scheme_material", dest="material_scoring_scheme", help="scores for material input and output overlaps: [equal products, similar products]")
     parser.add_option("-f", "--function_score_accumulation", dest="accumulation_function", help="function to accumulate symbiosis potential scores into final score")
 
     global ENERGY_FLOW_SCALING_FUNCTION
     global MATERIAL_FLOW_SCALING_FUNCTION
-    global ENERGY_SCORING_SCHEME
     global MATERIAL_SCORING_SCHEME
     global ACCUMULATION_FUNCTION
-    global ENERGY_BUCKETS
 
     (options, args) = parser.parse_args()
     if not options.company_data_path:
@@ -43,18 +37,10 @@ def get_user_input():
         print("energy_flow_scaling_function not given - using %s" %ENERGY_FLOW_SCALING_FUNCTION)
     else:
         ENERGY_FLOW_SCALING_FUNCTION = eval(options.energy_flow_scaling_function)
-    if not options.energy_flow_buckets:
-        print("energy_flow_buckets not given - using %s" %ENERGY_BUCKETS)
-    else:
-        ENERGY_BUCKETS = eval(options.energy_flow_buckets)
     if not options.material_flow_scaling_function:
         print("material_flow_scaling_function not given - using %s" %MATERIAL_FLOW_SCALING_FUNCTION)
     else:
         MATERIAL_FLOW_SCALING_FUNCTION = eval(options.material_flow_scaling_function)
-    if not options.energy_scoring_scheme:
-        print("scoring_scheme_energy not given - using %s" %ENERGY_SCORING_SCHEME)
-    else:
-        ENERGY_SCORING_SCHEME = eval(options.energy_scoring_scheme)
     if not options.material_scoring_scheme:
         print("scoring_scheme_material not given - using %s" %MATERIAL_SCORING_SCHEME)
     else:
@@ -83,8 +69,7 @@ def get_pairwise_scores(assoc_table, company_data):
                 continue
             score_vec_energy, score_vec_material = c1.get_symbiosis_potential(c2, assoc_table,
                                         ENERGY_FLOW_SCALING_FUNCTION, MATERIAL_FLOW_SCALING_FUNCTION, 
-                                        ENERGY_SCORING_SCHEME, MATERIAL_SCORING_SCHEME,
-                                        ENERGY_BUCKETS)
+                                        MATERIAL_SCORING_SCHEME)
             if not score_vec_energy:
                 #sum of empty list (== no potential) is 0
                 score_energy = -1000

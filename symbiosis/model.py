@@ -19,11 +19,9 @@ class Company:
     #TODO (later) also use geo-locations / street networks for ranking
     def get_symbiosis_potential(self, company, assoc_table, 
                                 energy_flow_scaling_function, material_flow_scaling_function,
-                                energy_scoring_scheme, material_scoring_scheme,
-                                energy_buckets):
+                                material_scoring_scheme):
         potential_energy = self.get_energy_flow_symbiosis_potential(company, assoc_table,
-                                energy_flow_scaling_function, energy_scoring_scheme, 
-                                energy_buckets)
+                                energy_flow_scaling_function)
         potential_material = self.get_material_flow_symbiosis_potential(company, assoc_table,
                                 material_flow_scaling_function, material_scoring_scheme)
         return (potential_energy, potential_material)
@@ -34,14 +32,13 @@ class Company:
     #TODO there should only be one code - else how to combine conflicting flow specifications?
     #for now: use only first code
     def get_energy_flow_symbiosis_potential(self, company, assoc_table, 
-                                            energy_flow_scaling_function, energy_scoring_scheme,
-                                            energy_buckets):
+                                            energy_flow_scaling_function):
         scores = []
         for code in self.isic_codes:
             for code2 in company.isic_codes:
                 scores.extend(assoc_table.get(code).energy.get_energy_flow_symbiosis_potential(
-                    assoc_table.get(code2).energy, energy_flow_scaling_function, energy_scoring_scheme, 
-                    self.size, company.size, energy_buckets))
+                    assoc_table.get(code2).energy, energy_flow_scaling_function, 
+                    self.size, company.size))
                 break
             break
         #print("energy flow symbiosis potential: " + (str(scores)))
@@ -96,38 +93,25 @@ class ISIC4:
             else:
                 raise ValueError(cell)
 
-        def get_energy_flow_symbiosis_potential(self, energy, weighting_function, weighting_scheme, 
-                                                size1, size2, energy_buckets):
-            return [score for score in [self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_function, weighting_scheme, size1, size2, energy_buckets), 
-                    self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_function, weighting_scheme, size1, size2, energy_buckets), 
-                    self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_function, weighting_scheme, size1, size2, energy_buckets), 
-                    self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_function, weighting_scheme, size1, size2, energy_buckets), 
-                    self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_function, weighting_scheme, size1, size2, energy_buckets)] if score]
+        def get_energy_flow_symbiosis_potential(self, energy, weighting_function, size1, size2):
+            return [score for score in [self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_function, size1, size2), 
+                    self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_function, size1, size2), 
+                    self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_function, size1, size2), 
+                    self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_function, size1, size2), 
+                    self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_function, size1, size2)] if score]
 
         def get_potential(self, energy1_in, energy2_out, energy1_out, energy2_in, 
-                            weighting_function, weighting_scheme, size1, size2, energy_buckets):
+                            weighting_function, size1, size2):
             if energy1_in + energy2_out + energy1_out + energy2_in == 0:
                 return None
-            p = 0
             size_factor_1 = weighting_function(size1)
             size_factor_2 = weighting_function(size2)
             
-            div_in1_out2 = abs((size_factor_1 * energy1_in) - size_factor_2 * energy2_out)
-            if div_in1_out2 < energy_buckets[0]:
-                p = weighting_scheme[0]
-            elif div_in1_out2 < energy_buckets[1]:
-                p = weighting_scheme[1]
-            elif div_in1_out2 > energy_buckets[1]:
-                p = weighting_scheme[2]
+            div_in1_out2 = -1 * abs((size_factor_1 * energy1_in) - size_factor_2 * energy2_out)
+            div_in2_out1 = -1 * abs((size_factor_1 * energy1_out) - size_factor_2 * energy2_in)
 
-            div_in2_out1 = abs((size_factor_1 * energy1_out) - size_factor_2 * energy2_in)
-            if div_in2_out1 < energy_buckets[0]:
-                p += weighting_scheme[0]
-            elif div_in2_out1 < energy_buckets[1]:
-                p += weighting_scheme[1]
-            elif div_in2_out1 > energy_buckets[1]:
-                p += weighting_scheme[2]
-            return p
+            #return the better of the two scores (direction of the flow does not matter for the score)
+            return max(div_in1_out2, div_in2_out1)
 
 
     class Material:
