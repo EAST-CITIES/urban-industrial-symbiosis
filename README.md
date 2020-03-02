@@ -11,17 +11,17 @@ python symbiosis/cluster.py -a <path to xlsx file containing the association tab
 ```
 
 Optional parameters:
-*  -s: scores for energy input and output overlaps: [exact match input and output, divergence of 1, divergence of 2]
-*  -t: scores for material input and output overlaps: [perfect_match(product and volume), partial_match (similar product, same volume), product_match (different volume), minimal_match (similar product, different volume)]
+*  -e: energy flow scaling function; determines the impact of the company size on energy flow values
+*  -m: material flow scaling function; determines the impact of the company size on material flow values
 *  -f: function to accumulate symbiosis potential scores into final score
-*  -b: buckets for different energy flow potential scores (how close do scores have to be in order to be treated as similar?): [upper boundary for closest score (exclusive), upper boundary for medium score (exclusive)]
+*  -s: scoring scheme materials; scores for input and output overlaps depending on whether materials are equal or similar
 
 Examples and standard values:
 ```
--s "[1.0, 0.5, 0.3]"  
--t "[1.0, 0.3, 0.5, 0.1]"
+-e "lambda x:float(x) / 100"
+-m "lambda x:float(x) / 100"
 -f "sum"
--b "[2, 5]"
+-s "[1.0, 0.3]"  
 ```
 
 ## Scoring
