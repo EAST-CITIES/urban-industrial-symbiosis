@@ -60,18 +60,18 @@ class Company:
 
 
 class EnergySymbiosisPotential:
+    max_val = 9999
 
     def __init__(self):
-        #TODO adjustable penalty value
-        self.thermal_absolute = 9999
+        self.thermal_absolute = self.max_val
         self.thermal_relative = 0.0
-        self.electrical_absolute = 9999
+        self.electrical_absolute = self.max_val
         self.electrical_relative = 0.0
-        self.chemical_absolute = 9999
+        self.chemical_absolute = self.max_val
         self.chemical_relative = 0.0
-        self.mechanical_absolute = 9999
+        self.mechanical_absolute = self.max_val
         self.mechanical_relative = 0.0
-        self.conditioned_media_absolute = 9999
+        self.conditioned_media_absolute = self.max_val
         self.conditioned_media_relative = 0.0
 
     def __str__(self):
@@ -81,6 +81,7 @@ class EnergySymbiosisPotential:
         return accumulation_function([self.thermal_absolute, self.electrical_absolute, self.chemical_absolute, self.mechanical_absolute, self.conditioned_media_absolute])
 
 class MaterialSymbiosisPotential:
+    max_val = 9999
 
     def __init__(self):
         self.absolute = {}
@@ -100,8 +101,7 @@ class MaterialSymbiosisPotential:
         if self.absolute.values():
             return accumulation_function(self.absolute.values())
         else:
-            #TODO adjustable value
-            return 9999
+            return self.max_val
 
 class ISIC4:
 
@@ -155,8 +155,7 @@ class ISIC4:
         def get_potential(self, energy1_in, energy2_out, energy1_out, energy2_in, 
                             weighting_function_size, weighting_function_year, size1, size2, year1, year2):
             if energy1_in + energy2_out + energy1_out + energy2_in == 0:
-                #TODO adjustable max penalty value
-                return 9999, 0.0
+                return EnergySymbiosisPotential.max_val, 0.0
             size_factor_1 = weighting_function_size(size1)
             size_factor_2 = weighting_function_size(size2) 
             
