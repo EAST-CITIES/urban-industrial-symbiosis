@@ -101,7 +101,7 @@ def get_pairwise_scores(assoc_table, company_data):
                 #sum of empty list (== no potential) is 0
                 score_energy_abs = sys.maxsize
             else:
-                print(score_vec_energy_abs)
+                #print(score_vec_energy_abs)
                 score_energy_abs = ACCUMULATION_FUNCTION(score_vec_energy_abs)
             if not score_vec_material_abs:
                 score_material_abs = sys.maxsize
@@ -123,17 +123,24 @@ def get_pairwise_scores(assoc_table, company_data):
 def pretty_print(score_dict):
     for key, val in score_dict.items():
         print("\n")
-        print(key)
+        if not key == sys.maxsize:
+            print("Divergence: %s" %key)
         for v in val:
-            print("%s --- %s\n%s\n%s\n" %(v[0].name, v[1].name, v[2], v[3]))
+            if not v[2] and not v[3]:
+                print("%s --- %s\n%s\n" %(v[0].name, v[1].name, "(no symbiosis potential)"))
+            else:    
+                print("%s --- %s\n%s\n%s\n" %(v[0].name, v[1].name, v[2], v[3]))
 
 
 def main():
     assoc_table, company_data = get_data(get_user_input())
-    for score_dict in get_pairwise_scores(assoc_table, company_data):
-        pretty_print(score_dict)
-        print("\n\t\t\t+++\t\t\t\n")
+    energy_scores, material_scores = get_pairwise_scores(assoc_table, company_data)
+    print("ENERGY SYMBIOSIS:\n")
+    pretty_print(energy_scores)
+    print("\n\t\t\t+++\t\t\t\n")
+    print("MATERIAL SYMBIOSIS:\n")
+    pretty_print(material_scores)
 
 
 if __name__=="__main__":
-    main()    
+    main() 
