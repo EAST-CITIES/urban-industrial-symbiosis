@@ -97,40 +97,94 @@ def get_pairwise_scores(assoc_table, company_data):
                                         ENERGY_FLOW_SCALING_FUNCTION_YEAR,
                                         MATERIAL_FLOW_SCALING_FUNCTION_YEAR,
                                         MATERIAL_SCORING_SCHEME)
-            score_energy_abs = energy_symbiosis_potential.get_score(ACCUMULATION_FUNCTION)
-            score_material_abs = material_symbiosis_potential.get_score(ACCUMULATION_FUNCTION)
-
-            #absolute numbers: score denotes difference, the smaller the better (less than 0 no bonus)
-            #relative numbers: score denotes percentage of coverage, the higher the better (more than 1 no bonus)
-            vals_energy = res_energy.get(score_energy_abs, [])
-            vals_material = res_material.get(score_material_abs, [])
-            vals_energy.append((c1, c2, energy_symbiosis_potential))
-            vals_material.append((c1, c2, material_symbiosis_potential))
-            res_energy[score_energy_abs] = vals_energy
-            res_material[score_material_abs] = vals_material
             checked.add((c1.name, c2.name))
             #checked.add((c2.name, c1.name))
-    return (collections.OrderedDict(sorted(res_energy.items())), collections.OrderedDict(sorted(res_material.items())))
+            associations = res_energy.get(c1.name, {})
+            associations[c2.name] = energy_symbiosis_potential
+            res_energy[c1.name] = associations
+            associations = res_material.get(c1.name, {})
+            associations[c2.name] = material_symbiosis_potential
+            res_material[c1.name] = associations
+    return (res_energy, res_material)
 
 def pretty_print(score_dict):
-    for key, val in score_dict.items():
-        if not key == sys.maxsize:
-            print("Divergence: %s" %key)
-        for v in val:
-            if not v[2] and not v[3]:
-                print("%s --- %s\n%s\n" %(v[0].name, v[1].name, "(no symbiosis potential)"))
-            else:    
-                print("%s --- %s\n%s\n" %(v[0].name, v[1].name, v[2]))
+    for n_matches, pair_dict in score_dict.items():
+        print("Number of matches: %s" %n_matches)
+        for divergence, company_pair_list in pair_dict.items():
+            for company_pair in company_pair_list:
+                company1, company2, potential1, potential2 = company_pair
+                #if not v[2] and not v[3]:
+                #    print("%s --- %s\n%s" %(v[0].name, v[1].name, "(no symbiosis potential)"))
+                #else:    
+                #    print("%s --- %s\n%s" %(v[0].name, v[1].name, v[2]))
+                print("Divergence absolute: %s" %divergence)
+                print("%s --- %s\n%s\n%s" %(company1, company2, potential1, potential2))
+
+def rank_energy_symbiosis_potentials(energy_dict):
+    d = {}
+    ranked = set([])
+    for company1, associations_dict in energy_dict.items():
+        for company2 in associations_dict.keys():
+            if company1+company2 in ranked:
+                continue
+            potential = associations_dict.get(company2)
+            n_overlaps1 = sum([1 for e in [potential.thermal_relative, potential.electrical_relative, potential.chemical_relative, potential.mechanical_relative, potential.conditioned_media_relative] if e != 0.0])
+            score_energy_abs = potential.get_score(ACCUMULATION_FUNCTION)
+            #get score for pairing of other direction
+            potential2 = energy_dict.get(company2).get(company1)
+            n_overlaps2 = sum([1 for e in [potential2.thermal_relative, potential2.electrical_relative, potential2.chemical_relative, potential2.mechanical_relative, potential2.conditioned_media_relative] if e != 0.0])
+            score_energy_abs2 = potential2.get_score(ACCUMULATION_FUNCTION)
+            #first rank according to number of matches
+            #then rank according to absolute numbers (sum up; the lower the score the better)
+            n_overlaps = n_overlaps1 + n_overlaps2
+            score_energy = score_energy_abs + score_energy_abs2
+            vals = d.get(n_overlaps, {})
+            vals2 = vals.get(score_energy, [])
+            vals2.append((company1, company2, potential, potential2))
+            vals[score_energy] = vals2
+            d[n_overlaps] = collections.OrderedDict(sorted(vals.items()))
+            ranked.add(company1+company2)
+            ranked.add(company2+company1)
+    
+    return collections.OrderedDict(sorted(d.items(), reverse=True))
+
+def rank_material_symbiosis_potentials(material_dict):
+    d = {}
+    ranked = set([])
+    for company1, associations_dict in material_dict.items():
+        for company2 in associations_dict.keys():
+            if company1+company2 in ranked:
+                continue
+            potential = associations_dict.get(company2)
+            n_overlaps1 = sum([1 for e in potential.relative.values() if e != 0.0])
+            score_material_abs = potential.get_score(ACCUMULATION_FUNCTION)
+            #get score for pairing of other direction
+            potential2 = material_dict.get(company2).get(company1)
+            n_overlaps2 = sum([1 for e in potential2.relative.values() if e != 0.0])
+            score_material_abs2 = potential2.get_score(ACCUMULATION_FUNCTION)
+            #first rank according to number of matches
+            #then rank according to absolute numbers (sum up; the lower the score the better)
+            n_overlaps = n_overlaps1 + n_overlaps2
+            score_material = score_material_abs + score_material_abs2
+            vals = d.get(n_overlaps, {})
+            vals2 = vals.get(score_material, [])
+            vals2.append((company1, company2, potential, potential2))
+            vals[score_material] = vals2
+            d[n_overlaps] = collections.OrderedDict(sorted(vals.items()))
+            ranked.add(company1+company2)
+            ranked.add(company2+company1)
+    
+    return collections.OrderedDict(sorted(d.items(), reverse=True))
 
 
 def main():
     assoc_table, company_data = get_data(get_user_input())
     energy_scores, material_scores = get_pairwise_scores(assoc_table, company_data)
     print("ENERGY SYMBIOSIS:\n")
-    pretty_print(energy_scores)
+    pretty_print(rank_energy_symbiosis_potentials(energy_scores))
     print("\n\t\t\t+++\t\t\t\n")
     print("MATERIAL SYMBIOSIS:\n")
-    pretty_print(material_scores)
+    pretty_print(rank_material_symbiosis_potentials(material_scores))
 
 
 if __name__=="__main__":
