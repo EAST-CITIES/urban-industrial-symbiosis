@@ -15,18 +15,17 @@ class Company:
         self.year = row[8]
         self.website = row[9]
 
-    #return vector with scores for energy and material input and output overlaps (total numbers + percentages)
     #TODO (later) also use geo-locations / street networks for ranking
     def get_symbiosis_potential(self, company, assoc_table, 
                                 energy_flow_scaling_function_size, material_flow_scaling_function_size,
                                 energy_flow_scaling_function_year, material_flow_scaling_function_year,
                                 material_scoring_scheme):
-        potential_energy_abs, potential_energy_rel = self.get_energy_flow_symbiosis_potential(company, assoc_table,
+        potential_energy = self.get_energy_flow_symbiosis_potential(company, assoc_table,
                                 energy_flow_scaling_function_size, energy_flow_scaling_function_year)
-        potential_material_abs, potential_material_rel = self.get_material_flow_symbiosis_potential(company, assoc_table,
+        potential_material = self.get_material_flow_symbiosis_potential(company, assoc_table,
                                 material_flow_scaling_function_size, material_flow_scaling_function_year, 
                                 material_scoring_scheme)
-        return (potential_energy_abs, potential_energy_rel, potential_material_abs, potential_material_rel)
+        return (potential_energy, potential_material)
 
     def __str__(self):
         return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s" %(self.name, self.sector, [str(p) for p in self.products], self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website)
@@ -39,28 +38,70 @@ class Company:
         scores = []
         for code in self.isic_codes:
             for code2 in company.isic_codes:
-                scores.extend(assoc_table.get(code).energy.get_energy_flow_symbiosis_potential(
+                scores.append(assoc_table.get(code).energy.get_energy_flow_symbiosis_potential(
                     assoc_table.get(code2).energy, energy_flow_scaling_function_size, 
                     energy_flow_scaling_function_year, self.size, company.size, self.year, company.year))
                 break
             break
         #print("energy flow symbiosis potential: " + (str(scores)))
-        return [[score[0] for score in scores], [score[1] for score in scores]]
+        return scores[0]
 
     #TODO (see energy...)
     def get_material_flow_symbiosis_potential(self, company, assoc_table,
                                             material_flow_scoring_function_size, material_flow_scoring_function_year, 
                                             material_scoring_scheme):
-        scores_abs = []
-        scores_rel = []
+        scores = []
         for code in self.isic_codes:
             for code2 in company.isic_codes:
-                scores = assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials, material_flow_scoring_function_size, material_flow_scoring_function_year, 
-                material_scoring_scheme, self.size, company.size, self.year, company.year)
-        scores_abs.extend(scores[0])
-        scores_rel.extend(scores[1])
+                scores.append(assoc_table.get(code).materials.get_material_flow_symbiosis_potential(assoc_table.get(code2).materials, material_flow_scoring_function_size, material_flow_scoring_function_year, 
+                material_scoring_scheme, self.size, company.size, self.year, company.year))
         #print("material flow symbiosis potential: " + (str(scores)))
-        return [scores_abs, scores_rel]
+        return scores[0]
+
+
+class EnergySymbiosisPotential:
+
+    def __init__(self):
+        #TODO adjustable penalty value
+        self.thermal_absolute = 9999
+        self.thermal_relative = 0.0
+        self.electrical_absolute = 9999
+        self.electrical_relative = 0.0
+        self.chemical_absolute = 9999
+        self.chemical_relative = 0.0
+        self.mechanical_absolute = 9999
+        self.mechanical_relative = 0.0
+        self.conditioned_media_absolute = 9999
+        self.conditioned_media_relative = 0.0
+
+    def __str__(self):
+        return "Missing thermal input: %s (%.2f%% coverage)\nMissing electrical input: %s (%.2f%% coverage)\nMissing chemical input: %s (%.2f%% coverage)\nMissing mechanical input: %s (%.2f%% coverage)\nMissing conditioned media input: %s (%.2f%% coverage)\n" %(self.thermal_absolute, 100*self.thermal_relative, self.electrical_absolute, 100*self.electrical_relative, self.chemical_absolute, 100*self.chemical_relative, self.mechanical_absolute, 100*self.mechanical_relative, self.conditioned_media_absolute, 100*self.conditioned_media_relative)
+
+    def get_score(self, accumulation_function):
+        return accumulation_function([self.thermal_absolute, self.electrical_absolute, self.chemical_absolute, self.mechanical_absolute, self.conditioned_media_absolute])
+
+class MaterialSymbiosisPotential:
+
+    def __init__(self):
+        self.absolute = {}
+        self.relative = {}
+
+    def __str__(self):
+        string = ""
+        for key in self.absolute.keys():
+            string += "Missing input for %s: %s (%s coverage)\n" %(key, self.absolute.get(key), "{:.2%}".format(self.relative.get(key)))
+        return string
+
+    def add(self, key, absolute, relative):
+        self.absolute[key] = absolute
+        self.relative[key] = relative
+    
+    def get_score(self, accumulation_function):
+        if self.absolute.values():
+            return accumulation_function(self.absolute.values())
+        else:
+            #TODO adjustable value
+            return 9999
 
 class ISIC4:
 
@@ -103,16 +144,19 @@ class ISIC4:
 
         def get_energy_flow_symbiosis_potential(self, energy, weighting_function_size, weighting_function_year, 
                                                 size1, size2, year1, year2):
-            return [score for score in [self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2), 
-                    self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2), 
-                    self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2), 
-                    self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2), 
-                    self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)] if score]
+            potential = EnergySymbiosisPotential()
+            potential.thermal_absolute, potential.thermal_relative = self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential.electrical_absolute, potential.electrical_relative = self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential.chemical_absolute, potential.chemical_relative = self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential_mechanical_absolute, potential_mechanical_relative = self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential_conditioned_media_absolute, potential_conditioned_media_relative = self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            return potential
 
         def get_potential(self, energy1_in, energy2_out, energy1_out, energy2_in, 
                             weighting_function_size, weighting_function_year, size1, size2, year1, year2):
             if energy1_in + energy2_out + energy1_out + energy2_in == 0:
-                return None
+                #TODO adjustable max penalty value
+                return 9999, 0.0
             size_factor_1 = weighting_function_size(size1)
             size_factor_2 = weighting_function_size(size2) 
             
@@ -123,8 +167,7 @@ class ISIC4:
             #old: return the better of the two scores (direction of the flow does not matter for the score)
             #new: return both scores: determine how much one factory can cover of the other one's input. Compute separately
             #return max(div_in1_out2, div_in2_out1)
-            #return obsolute score and percentage
-            #cap percentage at 1: more than 100% is irrelevant
+            #return absolute score and percentage
             return(div_in1_out2_abs, div_in1_out2_rel)
 
 
@@ -147,8 +190,7 @@ class ISIC4:
         #for each product: score for input and output match / overlap (also consider similarity/compatibility...)
         def get_material_flow_symbiosis_potential(self, material, scaling_function_size, scaling_function_year, 
                                                     weighting_scheme, size1, size2, year1, year2):
-            matches_abs = []
-            matches_rel = []
+            potential = MaterialSymbiosisPotential()
             # hs_low == hs_high / 5
             # hs_out == hs_out_high
             # flow == flow_value * ENERGY_FLOW_SCALING_FUNCTION(size)
@@ -165,51 +207,39 @@ class ISIC4:
             for product in self.hs_in_low:
                 for p in material.hs_out_low:
                     if product.similarity(p) == 1:
-                        matches_abs.append(score_1_equal - score_2_equal)
-                        matches_rel.append(score_2_equal / score_1_equal)
+                        potential.add(product, score_1_equal - score_2_equal, score_2_equal / score_1_equal)
                     elif product.similarity(p) == 0.5:
-                        matches_abs.append(score_1_similar - score_2_similar)
-                        matches_rel.append(score_2_similar / score_1_similar)
-
+                        potential.add(product, score_1_similar - score_2_similar, score_2_similar / score_1_similar)
+                #products are assumed to be mentioned in one of those categories only (e.g. either in hs_out_products or in hs_out_low or in hs_out_high)
                 for p in material.hs_out_products:
                     if product.similarity(p) == 1:
-                        matches_abs.append(score_1_equal - score_2_equal_high)
-                        matches_rel.append(score_2_equal / score_1_equal_high)
+                        potential.add(product, score_1_equal - score_2_equal_high, score_2_equal / score_1_equal_high)
                     elif product.similarity(p) == 0.5:
-                        matches_abs.append(score_1_similar - score_2_similar_high)
-                        matches_rel.append(score_2_similar_high / score_1_similar)
+                        potential.add(product, score_1_similar - score_2_similar_high, score_2_similar_high / score_1_similar)
 
                 for p in material.hs_out_high:
                     if product.similarity(p) == 1:
-                        matches_abs.append(score_1_equal - score_2_equal_high)
-                        matches_rel.append(score_2_equal_high / score_1_equal)
+                        potential.add(product, score_1_equal - score_2_equal_high, score_2_equal_high / score_1_equal)
                     elif product.similarity(p) == 0.5:
-                        matches_abs.append(score_1_similar - score_2_similar_high)
-                        matches_rel.append(score_2_similar_high / score_1_similar)
+                        potential.add(product, score_1_similar - score_2_similar_high, score_2_similar_high / score_1_similar)
 
             for product in self.hs_in_high:
                 for p in material.hs_out_high:
                     if product.similarity(p) == 1:
-                        matches_abs.append(score_1_equal_high - score_2_equal_high)
-                        matches_rel.append(score_2_equal_high / score_1_equal_high)
+                        potential.add(product, score_1_equal_high - score_2_equal_high, score_2_equal_high / score_1_equal_high)
                     elif product.similarity(p) == 0.5:
-                        matches_abs.append(score_1_similar_high - score_2_similar_high)
-                        matches_rel.append(score_2_similar_high / score_1_similar_high)
+                        potential.add(product, score_1_similar_high - score_2_similar_high, score_2_similar_high / score_1_similar_high)
                 for p in material.hs_out_products:
                     if product.similarity(p) == 1:
-                        matches_abs.append(score_1_equal_high - score_2_equal_high)
-                        matches_rel.append(score_2_equal_high / score_1_equal_high)
+                        potential.add(product, score_1_equal_high - score_2_equal_high, score_2_equal_high / score_1_equal_high)
                     elif product.similarity(p) == 0.5:
-                        matches_abs.append(score_1_similar_high - score_2_similar_high)
-                        matches_rel.append(score_2_similar_high / score_1_similar_high)
+                        potential.add(product, score_1_similar_high - score_2_similar_high, score_2_similar_high / score_1_similar_high)
                 for p in material.hs_out_low:
                     if product.similarity(p) == 1:
-                        matches_abs.append(score_1_equal_high - score_2_equal)
-                        matches_rel.append(score_2_equal / score_1_equal_high) 
+                        potential.add(product, score_1_equal_high - score_2_equal, score_2_equal / score_1_equal_high) 
                     elif product.similarity(p) == 0.5:
-                        matches_abs.append(score_1_similar_high - score_2_similar)
-                        matches_rel.append(score_2_similar / score_1_similar_high) 
-            return (matches_abs, matches_rel)
+                        potential.add(product, score_1_similar_high - score_2_similar, score_2_similar / score_1_similar_high) 
+            return potential
 
         class Product:
 

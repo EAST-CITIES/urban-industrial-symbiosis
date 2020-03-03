@@ -92,28 +92,20 @@ def get_pairwise_scores(assoc_table, company_data):
                 continue
             if (c1.name, c2.name) in checked:
                 continue
-            score_vec_energy_abs, score_vec_energy_rel, score_vec_material_abs, score_vec_material_rel = c1.get_symbiosis_potential(c2, assoc_table,
+            energy_symbiosis_potential, material_symbiosis_potential = c1.get_symbiosis_potential(c2, assoc_table,
                                         ENERGY_FLOW_SCALING_FUNCTION_SIZE, MATERIAL_FLOW_SCALING_FUNCTION_SIZE, 
                                         ENERGY_FLOW_SCALING_FUNCTION_YEAR,
                                         MATERIAL_FLOW_SCALING_FUNCTION_YEAR,
                                         MATERIAL_SCORING_SCHEME)
-            if not score_vec_energy_abs:
-                #sum of empty list (== no potential) is 0
-                score_energy_abs = sys.maxsize
-            else:
-                #print(score_vec_energy_abs)
-                score_energy_abs = ACCUMULATION_FUNCTION(score_vec_energy_abs)
-            if not score_vec_material_abs:
-                score_material_abs = sys.maxsize
-            else:
-                score_material_abs = ACCUMULATION_FUNCTION(score_vec_material_abs)
+            score_energy_abs = energy_symbiosis_potential.get_score(ACCUMULATION_FUNCTION)
+            score_material_abs = material_symbiosis_potential.get_score(ACCUMULATION_FUNCTION)
 
             #absolute numbers: score denotes difference, the smaller the better (less than 0 no bonus)
             #relative numbers: score denotes percentage of coverage, the higher the better (more than 1 no bonus)
             vals_energy = res_energy.get(score_energy_abs, [])
             vals_material = res_material.get(score_material_abs, [])
-            vals_energy.append((c1, c2, score_vec_energy_abs, score_vec_energy_rel))
-            vals_material.append((c1, c2, score_vec_material_abs, score_vec_material_rel))
+            vals_energy.append((c1, c2, energy_symbiosis_potential))
+            vals_material.append((c1, c2, material_symbiosis_potential))
             res_energy[score_energy_abs] = vals_energy
             res_material[score_material_abs] = vals_material
             checked.add((c1.name, c2.name))
@@ -122,14 +114,13 @@ def get_pairwise_scores(assoc_table, company_data):
 
 def pretty_print(score_dict):
     for key, val in score_dict.items():
-        print("\n")
         if not key == sys.maxsize:
             print("Divergence: %s" %key)
         for v in val:
             if not v[2] and not v[3]:
                 print("%s --- %s\n%s\n" %(v[0].name, v[1].name, "(no symbiosis potential)"))
             else:    
-                print("%s --- %s\n%s\n%s\n" %(v[0].name, v[1].name, v[2], v[3]))
+                print("%s --- %s\n%s\n" %(v[0].name, v[1].name, v[2]))
 
 
 def main():
