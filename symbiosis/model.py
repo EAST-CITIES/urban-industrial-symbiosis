@@ -182,7 +182,6 @@ class ISIC4:
         def __str__(self):
             return "material.HS-In-Low: %s; material.HS-In-High: %s; material.HS-Out-Products: %s; material.HS-Out-Low: %s; material.HS-Out-High: %s" %([str(p) for p in self.hs_in_low], [str(p) for p in self.hs_in_high], [str(p) for p in self.hs_out_products], [str(p) for p in self.hs_out_low], [str(p) for p in self.hs_out_high])
 
-        #TODO add leading 0 if only one digit?
         def to_products(self, cell):
             return [self.Product(code) for code in str(cell).split(";") if code != "None"]
 
@@ -242,23 +241,27 @@ class ISIC4:
 
         class Product:
 
-            def __init__(self, hs2):
-                self.hs2 = hs2
-                self.hs4 = None
-                self.hs6 = None
+            def __init__(self, hs):
+                #leading zeros are omitted at import: fix
+                if len(hs) % 2:
+                    hs = "0" + hs
+                if len(hs) == 2:
+                    self.hs2 = hs
+                elif len(hs) == 4:
+                    self.hs4 = hs
+                    self.hs2 = hs[:2]
+                elif len(hs) == 6:
+                    self.hs6 = hs
+                    self.hs4 = hs[:4]
+                    self.hs2 = hs[:2]
                 self.label = None
                 self.desci4 = None
+                
 
             #TODO use graph-based similarity measure
             def similarity(self, product):
                 if self.hs2 == product.hs2:
                     return 1
-                else:
-                    try:
-                        if self.hs2[0] == product.hs2[1]:
-                            return 0.5
-                    except IndexError:
-                        return 0
                 return 0
 
             def __str__(self):
