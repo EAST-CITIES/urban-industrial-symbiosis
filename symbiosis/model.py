@@ -151,28 +151,22 @@ class ISIC4:
         def get_energy_flow_symbiosis_potential(self, energy, weighting_function_size, weighting_function_year, 
                                                 size1, size2, year1, year2):
             potential = EnergySymbiosisPotential()
-            potential.thermal_absolute, potential.thermal_relative = self.get_potential(self.thermal_in, energy.thermal_out, self.thermal_out, energy.thermal_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
-            potential.electrical_absolute, potential.electrical_relative = self.get_potential(self.electrical_in, energy.electrical_out, self.electrical_out, energy.electrical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
-            potential.chemical_absolute, potential.chemical_relative = self.get_potential(self.chemical_in, energy.chemical_out, self.chemical_out, energy.chemical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
-            potential_mechanical_absolute, potential_mechanical_relative = self.get_potential(self.mechanical_in, energy.mechanical_out, self.mechanical_out, energy.mechanical_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
-            potential_conditioned_media_absolute, potential_conditioned_media_relative = self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, self.conditioned_media_out, energy.conditioned_media_in, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential.thermal_absolute, potential.thermal_relative = self.get_potential(self.thermal_in, energy.thermal_out, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential.electrical_absolute, potential.electrical_relative = self.get_potential(self.electrical_in, energy.electrical_out, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential.chemical_absolute, potential.chemical_relative = self.get_potential(self.chemical_in, energy.chemical_out, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential.mechanical_absolute, potential.mechanical_relative = self.get_potential(self.mechanical_in, energy.mechanical_out, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
+            potential.conditioned_media_absolute, potential.conditioned_media_relative = self.get_potential(self.conditioned_media_in, energy.conditioned_media_out, weighting_function_size, weighting_function_year, size1, size2, year1, year2)
             return potential
 
-        def get_potential(self, energy1_in, energy2_out, energy1_out, energy2_in, 
+        def get_potential(self, energy1_in, energy2_out, 
                             weighting_function_size, weighting_function_year, size1, size2, year1, year2):
-            if energy1_in + energy2_out + energy1_out + energy2_in == 0:
-                return EnergySymbiosisPotential.max_val, 0.0
+            if energy1_in == 0:
+                return 0.0, 0.0
             size_factor_1 = weighting_function_size(size1)
             size_factor_2 = weighting_function_size(size2) 
             
-            div_in1_out2_abs = weighting_function_year((size_factor_1 * energy1_in), year1) - float(weighting_function_year((size_factor_2 * energy2_out), year2))
-            div_in1_out2_rel = (weighting_function_year((size_factor_2 * energy2_out), year2)) / float(weighting_function_year((size_factor_1 * energy1_in), year1))
-            #div_in2_out1 = weighting_function_year((size_factor_1 * energy1_out), year1) / float(weighting_function_year((size_factor_2 * energy2_in), year2))
-
-            #old: return the better of the two scores (direction of the flow does not matter for the score)
-            #new: return both scores: determine how much one factory can cover of the other one's input. Compute separately
-            #return max(div_in1_out2, div_in2_out1)
-            #return absolute score and percentage
+            div_in1_out2_abs = weighting_function_year(year1, (size_factor_1 * energy1_in)) - float(weighting_function_year(year2, (size_factor_2 * energy2_out)))
+            div_in1_out2_rel = weighting_function_year(year2, (size_factor_2 * energy2_out)) / float(weighting_function_year(year1, (size_factor_1 * energy1_in)))
             return(div_in1_out2_abs, div_in1_out2_rel)
 
 
@@ -198,15 +192,15 @@ class ISIC4:
             # hs_low == hs_high / 5
             # hs_out == hs_out_high
             # flow == flow_value * ENERGY_FLOW_SCALING_FUNCTION(size)
-            score_1_equal = float(scaling_function_year(weighting_scheme[0] * scaling_function_size(size1), year1))
-            score_1_similar = float(scaling_function_year(weighting_scheme[1] * scaling_function_size(size1), year1))       
-            score_2_equal = float(scaling_function_year(weighting_scheme[0] * scaling_function_size(size2), year2))
-            score_2_similar = float(scaling_function_year(weighting_scheme[1] * scaling_function_size(size2), year2))       
+            score_1_equal = float(scaling_function_year(year1, weighting_scheme[0] * scaling_function_size(size1)))
+            score_1_similar = float(scaling_function_year(year1, weighting_scheme[1] * scaling_function_size(size1)))       
+            score_2_equal = float(scaling_function_year(year2, weighting_scheme[0] * scaling_function_size(size2)))
+            score_2_similar = float(scaling_function_year(year2, weighting_scheme[1] * scaling_function_size(size2)))       
 
-            score_1_equal_high = float(scaling_function_year(weighting_scheme[0] * scaling_function_size(size1) *5, year1))
-            score_1_similar_high = float(scaling_function_year(weighting_scheme[1] * scaling_function_size(size1) *5, year1))
-            score_2_equal_high = float(scaling_function_year(weighting_scheme[0] * scaling_function_size(size2) *5, year2))
-            score_2_similar_high = float(scaling_function_year(weighting_scheme[1] * scaling_function_size(size2) *5, year2))
+            score_1_equal_high = float(scaling_function_year(year1, weighting_scheme[0] * scaling_function_size(size1) *5))
+            score_1_similar_high = float(scaling_function_year(year1, weighting_scheme[1] * scaling_function_size(size1) *5))
+            score_2_equal_high = float(scaling_function_year(year2, weighting_scheme[0] * scaling_function_size(size2) *5))
+            score_2_similar_high = float(scaling_function_year(year2, weighting_scheme[1] * scaling_function_size(size2) *5))
             
             for product in self.hs_in_low:
                 for p in material.hs_out_low:

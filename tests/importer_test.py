@@ -11,9 +11,15 @@ company_data_path = os.path.join(data_path, "20191216_Unternehmensverzeichnis_To
 association_table_path = os.path.join(data_path, "20191216_Association_Table_2.xlsx")
 
 def test_association_table_import():
-    entries_with_thermal_energy = [entry for entry in importer.import_association_table(association_table_path) if entry.energy.thermal_out]
-
+    entries = importer.import_association_table(association_table_path)  
+    entries_with_thermal_energy = [entry for entry in entries if entry.energy.thermal_out]
     assert(len(entries_with_thermal_energy) == 5)
+
+    entries_with_chemical_energy_out = [entry for entry in entries if entry.energy.chemical_out]
+    assert(len(entries_with_chemical_energy_out) == 0)
+    
+    entries_with_chemical_energy_in = [entry for entry in entries if entry.energy.chemical_in]
+    assert(len(entries_with_chemical_energy_in) == 3)
 
 
 def test_import_data():
@@ -21,5 +27,5 @@ def test_import_data():
     for company in company_data:
         print(company)
 
-test_association_table_import()
 test_import_data()
+test_association_table_import()
