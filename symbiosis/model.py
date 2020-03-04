@@ -185,6 +185,18 @@ class ISIC4:
         def to_products(self, cell):
             return [self.Product(code) for code in str(cell).split(";") if code != "None"]
 
+        def get_score(self, scaling_function_size, scaling_function_year, product_similarity_factor, size, year, volume_factor):
+            return float(scaling_function_year(year, product_similarity_factor * scaling_function_size(size) * volume_factor))
+
+        def _get_potential(self, scaling_function_size, scaling_function_year, weighting_scheme, product1, product2, size1, size2, year1, year2, volume_factor1, volume_factor2):
+            product_similarity = product1.similarity(product2)
+            if not product_similarity == -1:
+                score1 = self.get_score(scaling_function_size, scaling_function_year, weighting_scheme[product_similarity], size1, year1, volume_factor1)
+                score2 = self.get_score(scaling_function_size, scaling_function_year, weighting_scheme[product_similarity], size2, year2, volume_factor2)
+                return (score1 - score2, score2 / score1)
+            return (None, None)
+
+
         #for each product: score for input and output match / overlap (also consider similarity/compatibility...)
         def get_material_flow_symbiosis_potential(self, material, scaling_function_size, scaling_function_year, 
                                                     weighting_scheme, size1, size2, year1, year2):
@@ -192,57 +204,44 @@ class ISIC4:
             # hs_low == hs_high / 5
             # hs_out == hs_out_high
             # flow == flow_value * ENERGY_FLOW_SCALING_FUNCTION(size)
-            score_1_equal = float(scaling_function_year(year1, weighting_scheme[0] * scaling_function_size(size1)))
-            score_1_similar = float(scaling_function_year(year1, weighting_scheme[1] * scaling_function_size(size1)))       
-            score_2_equal = float(scaling_function_year(year2, weighting_scheme[0] * scaling_function_size(size2)))
-            score_2_similar = float(scaling_function_year(year2, weighting_scheme[1] * scaling_function_size(size2)))       
-
-            score_1_equal_high = float(scaling_function_year(year1, weighting_scheme[0] * scaling_function_size(size1) *5))
-            score_1_similar_high = float(scaling_function_year(year1, weighting_scheme[1] * scaling_function_size(size1) *5))
-            score_2_equal_high = float(scaling_function_year(year2, weighting_scheme[0] * scaling_function_size(size2) *5))
-            score_2_similar_high = float(scaling_function_year(year2, weighting_scheme[1] * scaling_function_size(size2) *5))
-            
             for product in self.hs_in_low:
                 for p in material.hs_out_low:
-                    if product.similarity(p) == 1:
-                        potential.add(product, score_1_equal - score_2_equal, score_2_equal / score_1_equal)
-                    elif product.similarity(p) == 0.5:
-                        potential.add(product, score_1_similar - score_2_similar, score_2_similar / score_1_similar)
+                    potential_abs, potential_rel = self._get_potential(scaling_function_size, scaling_function_year, weighting_scheme, product, p, size1, size2, year1, year2, 1, 1)
+                    if potential_abs:
+                        potential.add(product, potential_abs, potential_rel)
                 #products are assumed to be mentioned in one of those categories only (e.g. either in hs_out_products or in hs_out_low or in hs_out_high)
                 for p in material.hs_out_products:
-                    if product.similarity(p) == 1:
-                        potential.add(product, score_1_equal - score_2_equal_high, score_2_equal / score_1_equal_high)
-                    elif product.similarity(p) == 0.5:
-                        potential.add(product, score_1_similar - score_2_similar_high, score_2_similar_high / score_1_similar)
-
+                    potential_abs, potential_rel = self._get_potential(scaling_function_size, scaling_function_year, weighting_scheme, product, p, size1, size2, year1, year2, 1, 5)
+                    if potential_abs:
+                        potential.add(product, potential_abs, potential_rel)
                 for p in material.hs_out_high:
-                    if product.similarity(p) == 1:
-                        potential.add(product, score_1_equal - score_2_equal_high, score_2_equal_high / score_1_equal)
-                    elif product.similarity(p) == 0.5:
-                        potential.add(product, score_1_similar - score_2_similar_high, score_2_similar_high / score_1_similar)
-
+                    potential_abs, potential_rel = self._get_potential(scaling_function_size, scaling_function_year, weighting_scheme, product, p, size1, size2, year1, year2, 1, 5)
+                    if potential_abs:
+                        potential.add(product, potential_abs, potential_rel)
             for product in self.hs_in_high:
                 for p in material.hs_out_high:
-                    if product.similarity(p) == 1:
-                        potential.add(product, score_1_equal_high - score_2_equal_high, score_2_equal_high / score_1_equal_high)
-                    elif product.similarity(p) == 0.5:
-                        potential.add(product, score_1_similar_high - score_2_similar_high, score_2_similar_high / score_1_similar_high)
+                    potential_abs, potential_rel = self._get_potential(scaling_function_size, scaling_function_year, weighting_scheme, product, p, size1, size2, year1, year2, 5, 5)
+                    if potential_abs:
+                        potential.add(product, potential_abs, potential_rel)
+
                 for p in material.hs_out_products:
-                    if product.similarity(p) == 1:
-                        potential.add(product, score_1_equal_high - score_2_equal_high, score_2_equal_high / score_1_equal_high)
-                    elif product.similarity(p) == 0.5:
-                        potential.add(product, score_1_similar_high - score_2_similar_high, score_2_similar_high / score_1_similar_high)
+                    potential_abs, potential_rel = self._get_potential(scaling_function_size, scaling_function_year, weighting_scheme, product, p, size1, size2, year1, year2, 5, 5)
+                    if potential_abs:
+                        potential.add(product, potential_abs, potential_rel)
                 for p in material.hs_out_low:
-                    if product.similarity(p) == 1:
-                        potential.add(product, score_1_equal_high - score_2_equal, score_2_equal / score_1_equal_high) 
-                    elif product.similarity(p) == 0.5:
-                        potential.add(product, score_1_similar_high - score_2_similar, score_2_similar / score_1_similar_high) 
+                    potential_abs, potential_rel = self._get_potential(scaling_function_size, scaling_function_year, weighting_scheme, product, p, size1, size2, year1, year2, 5, 1)
+                    if potential_abs:
+                        potential.add(product, potential_abs, potential_rel)
+            
             return potential
 
         class Product:
 
             def __init__(self, hs):
                 #leading zeros are omitted at import: fix
+                self.hs2 = None
+                self.hs4 = None
+                self.hs6 = None
                 if len(hs) % 2:
                     hs = "0" + hs
                 if len(hs) == 2:
@@ -258,12 +257,15 @@ class ISIC4:
                 self.desci4 = None
                 
 
-            #TODO use graph-based similarity measure
             def similarity(self, product):
-                if self.hs2 == product.hs2:
+                if self.hs6 and product.hs6 and (self.hs6 == product.hs6):
+                    return 2
+                elif self.hs4 and product.hs4 and (self.hs4 == product.hs4):
                     return 1
-                return 0
+                elif self.hs2 and product.hs2 and (self.hs2 == product.hs2):
+                    return 0
+                return -1
 
             def __str__(self):
                 #return "HS-2: %s (%s)" %(self.hs2, self.label)
-                return "HS-2: %s" %self.hs2
+                return "HS-2: %s; HS-4: %s; HS-6: %s" %(self.hs2, self.hs4, self.hs6)

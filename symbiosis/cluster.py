@@ -16,7 +16,7 @@ MATERIAL_FLOW_SCALING_FUNCTION_SIZE = lambda x:float(x) / STANDARD_SIZE
 #reduce energy value by 0.35% for each year after standard year
 ENERGY_FLOW_SCALING_FUNCTION_YEAR = lambda year,value:value - (value * ((year - STANDARD_YEAR) * 0.35) / 100.0)
 MATERIAL_FLOW_SCALING_FUNCTION_YEAR = lambda year,value:value - (value * ((year - STANDARD_YEAR) * 0.35) / 100.0)
-MATERIAL_SCORING_SCHEME = [1.0, 0.3]
+MATERIAL_SCORING_SCHEME = [1.0, 5.0, 10.0]
 #ACCUMULATION_FUNCTION = lambda x:reduce(operator.__sub__, x)
 #ACCUMULATION_FUNCTION = max
 #absolute numbers are capped at 0: more than 100% coverage should not yield bonus (absolute scores denote differences between need and coverage)
@@ -35,7 +35,7 @@ def get_user_input():
     parser.add_option("-m", "--material_flow_scaling_function_size", dest="material_flow_scaling_function_size", help="function determining the impact of the company size on material flows")
     parser.add_option("-y", "--energy_flow_scaling_function_year", dest="energy_flow_scaling_function_year", help="function determining the impact of the company year of establishment on energy flows")
     parser.add_option("-z", "--material_flow_scaling_function_year", dest="material_flow_scaling_function_year", help="function determining the impact of the company year of establishment on material flows")
-    parser.add_option("-s", "--scoring_scheme_material", dest="material_scoring_scheme", help="scores for material input and output overlaps: [equal products, similar products]")
+    parser.add_option("-s", "--scoring_scheme_material", dest="material_scoring_scheme", help="factor for material input and output overlaps: [equal HS2 codes, equal HS4 codes, equal HS6 codes]")
     parser.add_option("-f", "--function_score_accumulation", dest="accumulation_function", help="function to accumulate symbiosis potential scores into final score")
 
     global ENERGY_FLOW_SCALING_FUNCTION_SIZE
