@@ -108,17 +108,22 @@ def get_pairwise_scores(assoc_table, company_data):
     return (res_energy, res_material)
 
 def pretty_print(score_dict):
+    rank = 1
     for n_matches, pair_dict in score_dict.items():
-        print("Number of matches: %s" %n_matches)
+        #print("Number of matches: %s" %n_matches)
         for divergence, company_pair_list in pair_dict.items():
             for company_pair in company_pair_list:
                 company1, company2, potential1, potential2 = company_pair
-                #if not v[2] and not v[3]:
-                #    print("%s --- %s\n%s" %(v[0].name, v[1].name, "(no symbiosis potential)"))
-                #else:    
-                #    print("%s --- %s\n%s" %(v[0].name, v[1].name, v[2]))
-                print("Divergence absolute: %s" %divergence)
-                print("%s --- %s\n%s\n%s" %(company1, company2, potential1, potential2))
+                if potential1.is_empty() and potential2.is_empty():
+                    continue
+                print("\nRank: %s" %rank)
+                print("%s +++ %s" %(company1, company2))
+                print("Required inputs vs. outputs divergence score: %s\n" %divergence)
+                print("%s --> %s" %(company1, company2))
+                print(potential1)
+                print("%s --> %s" %(company2, company1))
+                print(potential2)
+                rank += 1
 
 def rank_energy_symbiosis_potentials(energy_dict):
     d = {}

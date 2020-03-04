@@ -80,6 +80,9 @@ class EnergySymbiosisPotential:
     def get_score(self, accumulation_function):
         return accumulation_function([self.thermal_absolute, self.electrical_absolute, self.chemical_absolute, self.mechanical_absolute, self.conditioned_media_absolute])
 
+    def is_empty(self):
+        return 0 == sum([self.thermal_relative, self.electrical_relative, self.chemical_relative, self.mechanical_relative, self.conditioned_media_relative])
+
 class MaterialSymbiosisPotential:
     max_val = 9999
 
@@ -102,6 +105,9 @@ class MaterialSymbiosisPotential:
             return accumulation_function(self.absolute.values())
         else:
             return self.max_val
+
+    def is_empty(self):
+        return len(self.absolute.values()) == 0
 
 class ISIC4:
 
