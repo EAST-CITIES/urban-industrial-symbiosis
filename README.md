@@ -16,14 +16,14 @@ Optional parameters:
 *  -y: energy flow scaling function; determines the impact of the factory's year of establishment on energy flow values
 *  -z: material flow scaling function; determines the impact of the factory's year of establishment on material flow values
 *  -f: function to accumulate symbiosis potential scores into final score
-*  -s: scoring scheme materials; scores for input and output overlaps depending on whether materials are equal or similar
+*  -s: scoring scheme materials; base factors for input and output overlaps depending on the similarity of materials [factor for equal HS2 codes, factor for equal HS4 codes, factor for equal HS6 codes]
 
 Examples and standard values:
 ```
--e "lambda x:float(x) / 100"
+-y "lambda year,value:value - (value * ((year - 1950) * 0.35) / 100.0)"
 -m "lambda x:float(x) / 100"
--f "max"
--s "[1.0, 0.3]"  
+-f "lambda x:reduce(operator.__add__, [max(y,0) for y in x])"
+-s "[1.0, 5.0, 10.0]"  
 ```
 
 ## Scoring
