@@ -14,6 +14,14 @@ class Company:
         self.postal_code = row[7]
         self.year = row[8]
         self.website = row[9]
+        if len(row) > 15:
+            self.lat = row[13]
+            self.lon = row[14]
+            self.circle = row[15]
+        else:
+            self.lat = None
+            self.lon = None
+            self.circle = None
 
     #TODO (later) also use geo-locations / street networks for ranking
     def get_symbiosis_potential(self, company, assoc_table, 
@@ -28,7 +36,7 @@ class Company:
         return (potential_energy, potential_material)
 
     def __str__(self):
-        return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s" %(self.name, self.sector, [str(p) for p in self.products], self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website)
+        return "Name: %s; Sector: %s; Products: %s; ISIC v4: %s; Size: %s; Street: %s; Number: %s; Postal Code: %s; Year: %s; Website: %s, Latitude: %s, Longitude: %s, Circle Size: %s" %(self.name, self.sector, [str(p) for p in self.products], self.isic_codes, self.size, self.street, self.number, self.postal_code, self.year, self.website, self.lat, self.lon, self.circle)
 
     #TODO there should only be one code - else how to combine conflicting flow specifications?
     #for now: use only first code
